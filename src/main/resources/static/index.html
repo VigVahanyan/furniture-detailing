@@ -1,0 +1,944 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect x=%221%22 y=%221%22 width=%2214%22 height=%2214%22 fill=%22%23dcc39a%22 stroke=%22%235a4630%22/%3E%3Cpath d=%22M8 1v14M1 8h7%22 stroke=%22%235a4630%22/%3E%3C/svg%3E">
+<title>Раскрой ЛДСП</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Narrow:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: workshop bench — parameters panel on the left, results (drawing / cut list / sheet maps / hardware / estimate) on the right; stacks on phones */
+:root{
+  --bg:#eef0ee; --panel:#ffffff; --ink:#1d2421; --muted:#5d6763; --line:#cfd5d1; --soft:#e3e7e4;
+  --accent:#1f5fbf; --accent-ink:#ffffff; --board:#d9c19a; --board-edge:#a98552; --waste:#c9cfcb;
+  --warn:#a35a00; --warn-bg:#fff2dc; --ok:#1e7a46;
+  --f-display:"Archivo Narrow","Arial Narrow",Arial,sans-serif;
+  --f-body:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161a19; --panel:#1f2523; --ink:#e7ebe9; --muted:#9aa5a0; --line:#35403c; --soft:#29312e;
+  --accent:#6ea2ff; --accent-ink:#0b1424; --board:#8d7552; --board-edge:#c9a571; --waste:#2c3431;
+  --warn:#ffb65c; --warn-bg:#3a2a12; --ok:#5cc98a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#161a19; --panel:#1f2523; --ink:#e7ebe9; --muted:#9aa5a0; --line:#35403c; --soft:#29312e;
+  --accent:#6ea2ff; --accent-ink:#0b1424; --board:#8d7552; --board-edge:#c9a571; --waste:#2c3431;
+  --warn:#ffb65c; --warn-bg:#3a2a12; --ok:#5cc98a; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.45;padding:16px;padding-block:20px 40px}
+h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance;letter-spacing:.01em}
+h1{font-size:26px;font-weight:700}
+h2{font-size:18px;font-weight:600}
+h3{font-size:15px;font-weight:600}
+.wrap{max-width:1400px;margin:0 auto;display:grid;gap:16px}
+header.top{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 16px}
+header.top p{margin:0;color:var(--muted);max-width:70ch}
+.grid{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px;display:grid;grid-template-columns:minmax(0,1fr);gap:14px;min-width:0}
+.label{font-family:var(--f-display);font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px}
+.fields.two{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+label.f{display:grid;gap:4px;font-size:12px;color:var(--muted);min-width:0}
+input,select{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:6px 8px;width:100%;min-width:0}
+input[type=number]{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+input[type=checkbox]{width:auto}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.check{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink)}
+button{font:inherit;font-weight:600;cursor:pointer;border-radius:4px;border:1px solid var(--line);background:var(--soft);color:var(--ink);padding:7px 12px}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.ghost{background:transparent}
+button:hover{filter:brightness(.97)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.mods{display:grid;grid-template-columns:minmax(0,1fr);gap:6px}
+.mod{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:4px;padding:6px 8px;cursor:pointer;background:var(--panel)}
+.mod.on{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.mod .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mod .dims{font-family:var(--f-mono);font-size:12px;color:var(--muted);white-space:nowrap}
+@media (max-width:420px){.mod .dims{display:none}}
+.mod button{padding:2px 8px;font-size:12px}
+.sw{width:10px;height:10px;border-radius:2px;flex:none}
+hr{border:0;border-top:1px solid var(--line);margin:0;width:100%}
+.tabs{display:flex;flex-wrap:wrap;gap:4px;border-bottom:1px solid var(--line)}
+.tabs button{border:0;border-bottom:2px solid transparent;border-radius:0;background:transparent;padding:8px 12px;color:var(--muted)}
+.tabs button.on{color:var(--ink);border-bottom-color:var(--accent)}
+.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.kpi{border:1px solid var(--line);border-radius:4px;padding:10px 12px;display:grid;gap:2px;background:var(--panel)}
+.kpi b{font-family:var(--f-mono);font-size:20px;font-weight:500;font-variant-numeric:tabular-nums}
+.kpi span{font-size:12px;color:var(--muted)}
+.tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:4px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:6px 8px;border-bottom:1px solid var(--soft);text-align:left;vertical-align:top}
+th{font-family:var(--f-display);font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--soft);position:sticky;top:0}
+td.n,th.n{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.grp td{background:var(--soft);font-weight:600}
+tfoot td{font-weight:700;border-top:2px solid var(--line)}
+.warns{display:grid;gap:6px}
+.warn{background:var(--warn-bg);color:var(--warn);border-radius:4px;padding:6px 10px;font-size:13px}
+.sheet{display:grid;gap:6px}
+.sheet .cap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px;font-size:13px}
+.sheet .cap .mono{font-family:var(--f-mono);color:var(--muted)}
+.svgbox{overflow-x:auto;border:1px solid var(--line);border-radius:4px;background:var(--waste)}
+.svgbox svg{display:block;width:100%;min-width:560px;height:auto}
+.draw{overflow-x:auto;border:1px solid var(--line);border-radius:4px;background:var(--panel)}
+.draw svg{display:block;width:100%;max-width:720px;height:auto;margin:0 auto}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+.tag{display:inline-block;font-size:11px;padding:1px 6px;border-radius:10px;background:var(--warn-bg);color:var(--warn);margin-left:6px;white-space:nowrap}
+a{color:var(--accent)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.custom td input{padding:4px 6px}
+.hint{font-size:12px;color:var(--muted);max-width:70ch}
+textarea{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:6px 8px;width:100%;resize:vertical}
+.ai{display:grid;gap:10px}
+.drop{display:grid;gap:8px;place-items:center;border:1.5px dashed var(--line);border-radius:6px;padding:14px;cursor:pointer;color:var(--muted);text-align:center;font-size:13px}
+.upbtn{display:inline-block;background:var(--accent);color:var(--accent-ink);font-weight:600;padding:8px 14px;border-radius:4px}
+.drop:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.drop.over{border-color:var(--accent);color:var(--accent)}
+.drop input{position:absolute;width:1px;height:1px;opacity:0}
+.thumbs{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.aiout + #aiOff{margin-top:0}
+.thumbs img{width:72px;height:72px;object-fit:cover;border-radius:4px;border:1px solid var(--line)}
+.aiout{display:grid;gap:8px;border:1px solid var(--line);border-radius:6px;padding:10px;background:var(--soft);font-size:13px}
+.aiout ul{margin:0;padding-left:18px}
+.aiout .err{color:var(--warn)}
+.aiout .okmsg{color:var(--ok)}
+.modno{font-family:var(--f-mono);font-size:12px;font-weight:600;color:#b8322a;min-width:1.4em}
+.step{gap:12px}
+.stephead{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.stepno{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--ink);color:var(--bg);font-family:var(--f-display);font-weight:700;font-size:13px;flex:none}
+.hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:820px){.hero{grid-template-columns:minmax(0,1fr)}}
+.drop.big{min-height:220px;align-content:center;padding:18px}
+.drop.big .thumbs img{width:140px;height:140px}
+.chip{font-size:12px;padding:3px 10px;border-radius:12px;background:var(--soft);color:var(--muted);white-space:nowrap}
+.chip.ok{color:var(--ok)}.chip.bad{color:var(--warn);background:var(--warn-bg)}
+label.f.inline{grid-auto-flow:column;align-items:center;gap:6px}
+label.f.inline input{width:220px;max-width:40vw}
+.asm{overflow-x:auto;border:1px solid var(--line);border-radius:4px;background:#ffffff}
+.asm svg{display:block;width:100%;min-width:760px;height:auto}
+.aisum{display:grid;gap:6px;border-left:3px solid var(--accent);padding:8px 12px;background:var(--soft);border-radius:0 4px 4px 0;font-size:13px}
+.aisum ul{margin:0;padding-left:18px;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Раскрой ЛДСП</h1>
+      <p>Фото мебели и размеры → Claude разбивает её на корпуса → чертёж сборки, деталировка, раскрой листов, фурнитура и смета по ценам domus.am.</p>
+    </div>
+    <div class="row">
+      <span class="chip" id="aiModel">Claude: проверка…</span>
+      <button class="ghost" id="btnReset" type="button">Сбросить пример</button>
+    </div>
+  </header>
+
+  <!-- STEP 1: photo + sizes -->
+  <section class="panel step" aria-labelledby="s1h">
+    <div class="stephead"><span class="stepno">1</span><h2 id="s1h">Фото и размеры</h2></div>
+    <div class="hero">
+      <label class="drop big" id="aiDrop" for="aiFile">
+        <input id="aiFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple>
+        <div class="thumbs" id="aiThumbs"></div>
+        <span class="upbtn">Загрузить фото</span>
+        <span id="aiDropTxt">или перетащите сюда (до 3 фото): фото, рендер или эскиз от руки</span>
+      </label>
+      <div class="ai">
+        <div class="fields">
+          <label class="f">Ширина, мм<input id="aiW" type="number" min="0" inputmode="numeric" placeholder="1900"></label>
+          <label class="f">Высота, мм<input id="aiH" type="number" min="0" inputmode="numeric" placeholder="2700"></label>
+          <label class="f">Глубина, мм<input id="aiD" type="number" min="0" inputmode="numeric" placeholder="580"></label>
+        </div>
+        <label class="f">Пожелания (необязательно)<textarea id="aiNote" rows="3" placeholder="Напр.: прихожая, внизу обувница, справа пенал с полками, вешалка открытая"></textarea></label>
+        <label class="check"><input id="aiAppendChk" type="checkbox"> Добавить к текущему проекту, а не заменить</label>
+        <div class="row"><button class="primary" id="aiGo" type="button">Рассчитать по фото</button><button class="ghost" id="aiStop" type="button" hidden>Стоп</button></div>
+        <div id="aiOut" class="aiout" hidden></div>
+        <p class="hint" id="aiOff" hidden style="margin:0;color:var(--warn)">Claude не подключён: задайте переменную ANTHROPIC_API_KEY и перезапустите приложение. Пока можно вставить JSON вручную или собрать изделие из модулей ниже.</p>
+        <details id="aiImport">
+          <summary class="small">Вставить конструкцию вручную (JSON)</summary>
+          <div style="display:grid;gap:8px;margin-top:8px">
+            <textarea id="aiJson" rows="4" placeholder='{"summary":"…","modules":[{"type":"wardrobe","name":"Шкаф","W":1200,"H":2200,"D":600,"doors":2,"x":0,"y":0}]}'></textarea>
+            <div class="row"><button type="button" id="aiJsonGo">Применить</button></div>
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 2: assembly drawing -->
+  <section class="panel step" aria-labelledby="s2h">
+    <div class="stephead">
+      <span class="stepno">2</span><h2 id="s2h">Чертёж сборки</h2>
+      <div class="row" style="margin-left:auto">
+        <label class="f inline">Название<input id="projTitle" type="text" placeholder="Сборка (по размерам)"></label>
+        <button type="button" id="dlPng">Скачать PNG</button>
+        <button type="button" id="dlSvg">Скачать SVG</button>
+      </div>
+    </div>
+    <div id="aiSummary" class="aisum" hidden></div>
+    <div class="asm" id="asmBox"><p class="muted" style="padding:16px">Чертёж строится…</p></div>
+    <p class="hint" style="margin:0">Номера в кружках совпадают со списком изделий ниже. Положение модуля (X от левого края, Y от пола) правится в редакторе изделия.</p>
+  </section>
+
+  <!-- STEP 3: details -->
+  <div class="stephead" style="padding-inline:4px"><span class="stepno">3</span><h2>Детали, раскрой и смета</h2></div>
+  <div class="grid">
+    <section class="panel" aria-label="Параметры">
+      <div class="row" style="justify-content:space-between">
+        <h2>Изделия</h2>
+        <div class="row">
+          <select id="addType" aria-label="Тип изделия" style="width:auto;flex:1 1 140px">
+            <option value="wardrobe">Шкаф распашной</option>
+            <option value="dresser">Комод</option>
+            <option value="kitchenLow">Кухня: нижний модуль</option>
+            <option value="kitchenUp">Кухня: верхний модуль</option>
+            <option value="rack">Стеллаж</option>
+            <option value="tumba">Тумба</option>
+          </select>
+          <button class="primary" id="btnAdd" type="button">Добавить</button>
+        </div>
+      </div>
+      <div class="mods" id="mods"></div>
+      <hr>
+      <div id="editor"></div>
+      <hr>
+      <h2>Материалы и раскрой</h2>
+      <div class="fields two" id="settings"></div>
+      <p class="hint">Пропил и кромка обрезки — как у форматно-раскроечного станка. Если декор однотонный, снимите галочку «текстура», чтобы детали можно было поворачивать и экономить лист.</p>
+    </section>
+
+    <section class="panel" aria-label="Результат">
+      <div class="summary" id="summary"></div>
+      <div class="warns" id="warns"></div>
+      <nav class="tabs" id="tabs">
+        <button type="button" data-t="parts" class="on">Деталировка</button>
+        <button type="button" data-t="cut">Раскрой</button>
+        <button type="button" data-t="hw">Фурнитура</button>
+        <button type="button" data-t="cost">Смета</button>
+        <button type="button" data-t="draw">Модули</button>
+        <button type="button" data-t="cat">Каталог и цены</button>
+      </nav>
+      <div id="view"></div>
+    </section>
+  </div>
+</div>
+
+<script>
+/* ===================== CATALOG (domus.am, 07.10.2026) ===================== */
+const D = 'https://domus.am/product/';
+const SHEETS = [
+  {id:'k152', name:'152 Opak White (Kastamonu)', L:3660,W:1830,T:18, price:24000, url:D+'152-laminated-chipboard-ldp-3660x1830x18-opaque-1', kind:'ldsp', plain:true},
+  {id:'k496', name:'496 Lidya FRZ (Kastamonu)', L:3660,W:1830,T:18, price:27000, url:D+'496-lam-mdf-3660x1830x18-lidya-frz-group-2-kasta', kind:'ldsp'},
+  {id:'k506', name:'506 Petra FRZ (Kastamonu)', L:3660,W:1830,T:18, price:29000, url:D+'506-lam-mdf-3660x1830x18-petra-frz-group-4-kasta', kind:'ldsp'},
+  {id:'kgran', name:'Granite NTR (Kastamonu)', L:3660,W:1830,T:18, price:29000, url:D+'laminated-chipboard-ldp-3660x1830x18-granite-nt', kind:'ldsp', plain:true},
+  {id:'e708u', name:'708U Light Grey (Egger)', L:2800,W:2070,T:18, price:32500, url:D+'708u-lam-mdf-2800x2070x18-light-greyst9', kind:'ldsp', plain:true},
+  {id:'e201u', name:'201U Pebble Grey (Egger)', L:2800,W:2070,T:18, price:33500, url:D+'201u-laminated-chipboard-ldp-2800x2070x18-pebbl', kind:'ldsp', plain:true},
+  {id:'e1318', name:'1318H Natural Wild Oak (Egger)', L:2800,W:2070,T:18, price:33500, url:D+'1318h-laminated-chipboard-ldp-2800x2070x18-natu', kind:'ldsp'},
+  {id:'e3156', name:'3156H Grey Corbridge Oak (Egger)', L:2800,W:2070,T:18, price:33500, url:D+'3156h-laminated-chipboard-ldp-2800x2070x18-grey', kind:'ldsp'},
+  {id:'e3331', name:'3331H Natural Nebraska Oak (Egger)', L:2800,W:2070,T:18, price:35500, url:D+'3331h-lam-chipboard-2800x2070x18-natural-nebraska', kind:'ldsp'},
+  {id:'e3730', name:'3730H Natural Hickory (Egger)', L:2800,W:2070,T:18, price:35500, url:D+'3730h-lam-mdf-2800x2070x18-natural-hickory', kind:'ldsp'},
+  {id:'e433f', name:'433F Anthracite Linen (Egger)', L:2800,W:2070,T:18, price:36500, url:D+'433f-lam-mdf-2800x2070x18-anthracite-linenst10', kind:'ldsp', plain:true},
+  {id:'e206f', name:'206F Black Pietra Grigia (Egger)', L:2800,W:2070,T:18, price:36500, url:D+'206f-laminated-chipboard-ldp-2800x2070x18-pietr', kind:'ldsp'},
+  {id:'e1312', name:'1312H White River Oak (Egger)', L:2800,W:2070,T:18, price:36500, url:D+'1312h-laminated-chipboard-ldp-2800x2070x18-whit', kind:'ldsp'},
+  {id:'e1344', name:'1344H Cognac Sherman Oak (Egger)', L:2800,W:2070,T:18, price:45500, url:D+'1344h-laminated-chipboard-ldp-2800x2070x18-cogn', kind:'ldsp'},
+  {id:'s_p44', name:'P44 Atlas Nero (Saviola)', L:2800,W:2120,T:18, price:43900, url:D+'p44-lam-chipboard-2800x2120x18-atlas-nero-atlas', kind:'ldsp', plain:true},
+  {id:'dvp_mp', name:'ДВП 3 мм Клён (Kronospan)', L:2800,W:2070,T:3, price:6100, url:D+'0375-lam-mdf-2800x2070x3-maple-kronospan-russia', kind:'dvp'},
+  {id:'dvp_bk', name:'ДВП 3 мм Чёрный (Kronospan)', L:2800,W:2070,T:3, price:6100, url:D+'0190-lam-mdf-2800x2070x3-black-kronospan-russia', kind:'dvp'},
+  {id:'dvp_raw', name:'ДВП 2.5 мм некрашеный', L:2745,W:1700,T:2.5, price:3050, url:D+'mdf-2745x1700x25', kind:'dvp'},
+];
+// group: hinge, slide, handle, leg, edge, fast, misc. verify=true → нет на domus или неясна единица
+const HW = [
+  {id:'h3d',  g:'hinge', name:'Петля Italy System 3D, доводчик, clip (полунакладная)', price:220, url:D+'italy-system-3d-furniture-hinge-semi-overlay-with', note:'для накладной двери подберите накладную модель'},
+  {id:'h3dv', g:'hinge', name:'Петля Italy System 3D, доводчик (вкладная)', price:220, url:D+'italy-system-3d-furniture-hinge-insert-with-dampe'},
+  {id:'hstd', g:'hinge', name:'Петля Italy System, 4 отв., полунакладная, 105°', price:75, url:D+'italy-system-furniture-hinge-semi-overlay-4-holes'},
+  {id:'sl_ball', g:'slide', name:'Направляющие шариковые Italy System 42', series:{250:440,300:500,350:615,400:700,420:800,500:900,550:1000,600:1100}, url:D+'ball-bearing-slide-42-400-08x08x08-mm-full-ex', unitNote:'цена за комплект — уточнить, за пару или за шт.'},
+  {id:'sl_ball45', g:'slide', name:'Направляющие шариковые Hafele 45 (1.2 мм)', series:{350:2850,400:3100,450:3600,500:4000}, url:D+'hafele-43221973-ball-bearing-guide-45-400-12'},
+  {id:'sl_matrix', g:'slide', name:'Hafele Matrix Runner скрытые, доводчик', series:{300:5000,350:5250,400:5500,450:5750,500:6000}, url:D+'hafele-43310540-matrix-runner-hidden-guide-400'},
+  {id:'hd256', g:'handle', name:'Ручка W0306 Mat black 256 мм', price:1250, url:D+'w0306-297-256-mat-black-modern-handle'},
+  {id:'hd320', g:'handle', name:'Ручка W0306 Mat black 320 мм', price:1400, url:D+'w0306-347-320-mat-black-modern-handle'},
+  {id:'hd448', g:'handle', name:'Ручка W0306 Mat black 448 мм', price:1950, url:D+'w0306-497-448-mat-black-modern-handle'},
+  {id:'hd640', g:'handle', name:'Ручка W0306 Mat black 640 мм', price:2750, url:D+'w0306-697-640-mat-black-modern-handle'},
+  {id:'hdknob', g:'handle', name:'Ручка-кнопка Viva 411 Black', price:300, url:D+'viva-411-knob-black-modern-handle'},
+  {id:'hdnone', g:'handle', name:'Без ручек (push-to-open / профиль)', price:0},
+  {id:'leg100', g:'leg', name:'Опора конусная 100 мм, регулируемая, хром', price:650, url:D+'conical-furniture-leg-100mm-metal-chrome-adjus-1'},
+  {id:'leg268', g:'leg', name:'Опора квадратная 30×30×100, чёрная, регулир.', price:650, url:D+'er-268-square-furniture-support-30x30x100mm-alu'},
+  {id:'legpl', g:'leg', name:'Подпятник Pimo Bingo пластик', price:70, url:D+'pimo-bingo-large-round-leg-with-bolt-plastic-whi'},
+  {id:'eabs', g:'edge', name:'Кромка ABS Cleaf 23×1.0 (за м)', price:330, url:D+'b073-total-whitesherwood-long-matte-23x10-abs'},
+  {id:'emel', g:'edge', name:'Кромка меламин Tece 20 мм с клеем', price:1950, url:D+'1000-beyaz-20mm-glossy-melamine-edge-with-adhesi', unitNote:'цена за упаковку — проверьте метраж'},
+  {id:'conf', g:'fast', name:'Конфирмат 7×50', price:15, verify:true, note:'нет в каталоге domus — цена ориентировочная'},
+  {id:'scr416', g:'fast', name:'Саморез ДСП Samet 4×16 (петли, направляющие)', price:2, url:D+'samet-1t1220104016-self-tapping-screw-for-particle'},
+  {id:'scr3516', g:'fast', name:'Саморез ДСП Samet 3.5×16 (задняя стенка ДВП)', price:1.8, url:D+'samet-1t1220102016-self-tapping-screw-for-particle-1'},
+  {id:'dowel8', g:'fast', name:'Дюбель 8 мм', price:2.5, url:D+'dowel-8mm-white'},
+  {id:'shsup', g:'fast', name:'Полкодержатель 5 мм', price:25, verify:true, note:'не нашёл на domus — цена ориентировочная'},
+  {id:'rod', g:'misc', name:'Штанга для одежды Ø25 + 2 держателя', price:2500, verify:true, note:'раздел «Ռելսեր» на domus — уточнить модель'},
+  {id:'hang', g:'misc', name:'Навес для верхнего шкафа (пара)', price:900, verify:true, note:'не нашёл на domus — уточнить'},
+];
+const CUT = {manual:120, digital:220}; // драм за деталь, domus.am/kahvouyqi-listeri-ktrvoum
+
+/* ===================== STATE ===================== */
+const PRESETS = {
+  wardrobe:{name:'Шкаф распашной', W:1200,H:2200,D:600, doors:2, drawers:0, dh:180, partitions:0, shelves:3, removable:true, top:'solid', base:'plinth', legH:100, plinthH:80, rod:true, back:true},
+  dresser:{name:'Комод', W:800,H:850,D:450, doors:0, drawers:4, dh:180, partitions:0, shelves:0, removable:true, top:'solid', base:'legs', legH:100, plinthH:80, rod:false, back:true},
+  kitchenLow:{name:'Кухня: нижний', W:600,H:820,D:560, doors:1, drawers:0, dh:150, partitions:0, shelves:1, removable:true, top:'rails', base:'legs', legH:100, plinthH:100, rod:false, back:true},
+  kitchenUp:{name:'Кухня: верхний', W:600,H:720,D:300, doors:1, drawers:0, dh:150, partitions:0, shelves:2, removable:true, top:'solid', base:'none', legH:100, plinthH:80, rod:false, back:true, hang:true},
+  rack:{name:'Стеллаж', W:800,H:1800,D:350, doors:0, drawers:0, dh:150, partitions:1, shelves:4, removable:false, top:'solid', base:'plinth', legH:100, plinthH:60, rod:false, back:true},
+  tumba:{name:'Тумба', W:500,H:600,D:400, doors:1, drawers:1, dh:150, partitions:0, shelves:1, removable:true, top:'solid', base:'legs', legH:100, plinthH:80, rod:false, back:true},
+};
+const DEF_SETTINGS = {corpus:'e1318', facade:'e708u', back:'dvp_mp', kerf:4, trim:10, grain:true, edge:'eabs', hinge:'h3d', slide:'sl_ball', handle:'hd256', leg:'leg100', cut:'digital'};
+const MOD_COLORS = ['#3d7bd9','#d9733d','#3da86a','#a65cd1','#c9a227','#d14a72','#2fa3a3','#7b8a2e'];
+let uid = 1;
+function mkMod(type){ return Object.assign({id:uid++, type}, JSON.parse(JSON.stringify(PRESETS[type]))); }
+// Example project: hallway 1900×2700×580 split into 9 carcasses (x — mm from the left edge, y — mm from the floor)
+const HALL = [
+  {type:'tumba', name:'Л: обувной низ', W:500,H:450,D:580, doors:1,drawers:0,dh:180,partitions:0,shelves:1, base:'plinth',plinthH:60, x:0,y:0},
+  {type:'wardrobe', name:'Л: шкаф одежда', W:500,H:1650,D:580, doors:1,drawers:0,dh:180,partitions:0,shelves:1, base:'none', rod:true, x:0,y:450},
+  {type:'wardrobe', name:'Л: антресоль', W:500,H:600,D:580, doors:1,drawers:0,dh:180,partitions:0,shelves:0, base:'none', x:0,y:2100},
+  {type:'tumba', name:'Ц: тумба под сиденьем', W:450,H:450,D:580, doors:1,drawers:0,dh:180,partitions:0,shelves:1, base:'plinth',plinthH:60, x:500,y:0},
+  {type:'rack', name:'Ц: ниша под пылесос', W:550,H:450,D:580, doors:0,drawers:0,dh:180,partitions:0,shelves:0, base:'none', x:950,y:0},
+  {type:'rack', name:'Ц: ниша с вешалкой', W:1000,H:1650,D:580, doors:0,drawers:0,dh:180,partitions:0,shelves:0, base:'none', x:500,y:450},
+  {type:'wardrobe', name:'Ц: антресоль', W:1000,H:600,D:580, doors:2,drawers:0,dh:180,partitions:0,shelves:0, base:'none', x:500,y:2100},
+  {type:'wardrobe', name:'П: пенал', W:400,H:2100,D:580, doors:1,drawers:0,dh:180,partitions:0,shelves:5, base:'plinth',plinthH:60, x:1500,y:0},
+  {type:'wardrobe', name:'П: антресоль', W:400,H:600,D:580, doors:1,drawers:0,dh:180,partitions:0,shelves:0, base:'none', x:1500,y:2100},
+];
+function fromSpec(m){ const p = PRESETS[m.type] || PRESETS.wardrobe;
+  return {...JSON.parse(JSON.stringify(p)), rod:false, hang:false, ...m, id:uid++, x:m.x??null, y:m.y??null}; }
+function sample(){ uid=1; return {modules:HALL.map(fromSpec),
+  custom:[{name:'Ц: задняя панель ниши (декор)', l:1614, w:964, qty:1, mat:'facade', el:0, ew:0}],
+  settings:{...DEF_SETTINGS, corpus:'e1344', facade:'e201u'}, sel:1, tab:'parts', prices:{}, title:'Прихожая', ai:null}; }
+const KEY='raskroy-ldsp-v2';
+let S;
+try{ S = JSON.parse(localStorage.getItem(KEY)); }catch(e){ S=null; }
+if(!S || !S.modules){ S = sample(); } else { uid = Math.max(0,...S.modules.map(m=>m.id))+1; S.settings = {...DEF_SETTINGS, ...S.settings}; S.prices = S.prices||{}; S.custom = S.custom||[]; S.modules.forEach(m=>{ m.x??=null; m.y??=null; }); }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+
+/* ===================== HELPERS ===================== */
+const $ = s => document.querySelector(s);
+const fmt = n => Math.round(n).toLocaleString('ru-RU');
+const fmt1 = n => (Math.round(n*10)/10).toLocaleString('ru-RU');
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const sheetById = id => SHEETS.find(s=>s.id===id) || SHEETS[0];
+const hwById = id => HW.find(h=>h.id===id);
+function priceOf(item, key){ const k = item.id + (key!=null?':'+key:''); if(S.prices[k]!=null && S.prices[k]!=='') return +S.prices[k]; if(key!=null) return item.series[key]; return item.price; }
+function sheetPrice(sh){ const k='sheet:'+sh.id; return (S.prices[k]!=null && S.prices[k]!=='') ? +S.prices[k] : sh.price; }
+const modColor = i => MOD_COLORS[i % MOD_COLORS.length];
+
+/* ===================== DETAILING ===================== */
+function hingesFor(h){ return h<=900?2 : h<=1600?3 : h<=2000?4 : 5; }
+function pickSlide(slide, maxLen){
+  const lens = Object.keys(slide.series).map(Number).sort((a,b)=>a-b).filter(l=>l<=maxLen);
+  return lens.length ? lens[lens.length-1] : null;
+}
+function buildModule(m, idx){
+  const st = S.settings, t = sheetById(st.corpus).T, tb = sheetById(st.back).T;
+  const parts = [], hw = {}, warns = [];
+  const add = (name,l,w,qty,mat,el,ew) => { if(qty>0 && l>0 && w>0) parts.push({mod:idx, modName:m.name, name, l:Math.round(l), w:Math.round(w), qty, mat, el, ew}); };
+  const addHw = (id, n, key) => { if(n<=0) return; const k = id+(key!=null?':'+key:''); hw[k] = (hw[k]||0)+n; };
+  const W=+m.W, H=+m.H, Dp=+m.D;
+  const legH = m.base==='legs' ? +m.legH : 0;
+  const plH  = m.base==='plinth' ? +m.plinthH : 0;
+  const bodyH = H - legH;
+  const inW = W - 2*t;
+  const nP = Math.max(0, +m.partitions|0), nS = Math.max(0, +m.shelves|0);
+  const nDoor = Math.max(0, +m.doors|0), nDr = Math.max(0, +m.drawers|0), dh = +m.dh;
+  const jp = Dp<=400 ? 2 : 3; // конфирматов на стык
+  let conf = 0;
+  const shelfDepth = Dp - (m.back ? 0 : 0) - 20;
+
+  // корпус
+  add('Боковина', bodyH, Dp, 2, 'corpus', 1, 0);
+  add('Дно', inW, Dp, 1, 'corpus', 1, 0); conf += 2*jp;
+  if(m.top==='rails'){ add('Царга', inW, 100, 2, 'corpus', 1, 0); conf += 4*1 + 4; }
+  else { add('Крышка', inW, Dp, 1, 'corpus', 1, 0); conf += 2*jp; }
+  const drawerZone = nDr>0 ? nDr*dh : 0;
+  const hasDivider = nDr>0 && nDoor>0;
+  if(hasDivider){ add('Полка-разделитель', inW, Dp, 1, 'corpus', 1, 0); conf += 2*jp; }
+  const innerH = bodyH - plH - 2*t;
+  const partH = innerH - (hasDivider ? drawerZone + t : (nDr>0 && nDoor===0 ? innerH : 0));
+  if(nP>0){
+    if(partH>100){ add('Перегородка', partH, Dp - 20, nP, 'corpus', 1, 0); conf += nP*2*jp; }
+    else warns.push(`${m.name}: перегородки не помещаются при выбранных ящиках`);
+  }
+  const secW = (inW - nP*t)/(nP+1);
+  if(nS>0){
+    const sw = m.removable ? secW - 2 : secW;
+    add(m.removable ? 'Полка съёмная' : 'Полка', sw, shelfDepth, nS*(nP+1), 'corpus', 1, 0);
+    if(m.removable) addHw('shsup', 4*nS*(nP+1)); else conf += nS*(nP+1)*2*jp;
+  }
+  if(m.base==='plinth'){
+    add('Цоколь передний', inW, plH, 1, 'corpus', 1, 0);
+    add('Цоколь задний', inW, plH, 1, 'corpus', 0, 0);
+    conf += 4;
+  }
+  if(m.back){
+    add('Задняя стенка', bodyH - 4, W - 4, 1, 'back', 0, 0);
+    addHw('scr3516', Math.ceil(2*(bodyH+W)/150) + Math.ceil(W/150)*Math.max(0,nS? 1:0));
+  }
+  // фасады
+  const FZ = bodyH - plH - 4;
+  if(nDoor>0){
+    const doorH = FZ - drawerZone;
+    const doorW = (W - 4 - 3*(nDoor-1))/nDoor;
+    if(doorH < 150) warns.push(`${m.name}: для дверей не остаётся высоты`);
+    else {
+      add('Дверь', doorH, doorW, nDoor, 'facade', 2, 2);
+      const hpd = hingesFor(doorH);
+      addHw(st.hinge, hpd*nDoor); addHw('scr416', hpd*nDoor*4); addHw(st.handle, nDoor);
+      if(doorW>600) warns.push(`${m.name}: ширина двери ${Math.round(doorW)} мм > 600 — добавьте дверь`);
+    }
+  }
+  if(nDr>0){
+    if(drawerZone > FZ) warns.push(`${m.name}: ${nDr} ящ. × ${dh} мм не помещаются в высоту фасада ${FZ} мм`);
+    add('Фасад ящика', W - 4, dh - 3, nDr, 'facade', 2, 2);
+    const slide = hwById(st.slide);
+    const sl = pickSlide(slide, Dp - 30 - tb);
+    if(!sl) warns.push(`${m.name}: нет направляющих под глубину ${Dp} мм`);
+    else {
+      const hb = Math.max(80, dh - 60);
+      const boxW = inW - 26;
+      add('Ящик: бок', sl, hb, 2*nDr, 'corpus', 1, 0);
+      add('Ящик: перед/зад', boxW - 2*t, hb, 2*nDr, 'corpus', 1, 0);
+      add('Ящик: дно', boxW, sl, nDr, 'back', 0, 0);
+      addHw(st.slide, nDr, sl); addHw('scr416', nDr*12); addHw('scr3516', nDr*Math.ceil(2*(boxW+sl)/150));
+      conf += nDr*8;
+      addHw(st.handle, nDr);
+    }
+  }
+  if(m.base==='legs') addHw(st.leg, W>900 ? 6 : 4);
+  if(m.rod && nDoor>0) addHw('rod', nP+1);
+  if(m.hang) addHw('hang', 1);
+  addHw('conf', conf);
+  if(H<=0||W<=0||Dp<=0) warns.push(`${m.name}: проверьте габариты`);
+  return {parts, hw, warns, geo:{W,H,Dp,t,legH,plH,bodyH,inW,nP,nS,nDoor,nDr,dh,drawerZone,FZ,secW,hasDivider}};
+}
+function buildAll(){
+  const res = {parts:[], hw:{}, warns:[], mods:[]};
+  S.modules.forEach((m,i)=>{
+    const r = buildModule(m,i); res.mods.push(r);
+    res.parts.push(...r.parts); res.warns.push(...r.warns);
+    for(const k in r.hw) res.hw[k]=(res.hw[k]||0)+r.hw[k];
+  });
+  S.custom.forEach(c=>{ if(+c.l>0 && +c.w>0 && +c.qty>0) res.parts.push({mod:-1, modName:'Доп. детали', name:c.name||'Деталь', l:+c.l, w:+c.w, qty:+c.qty, mat:c.mat, el:+c.el||0, ew:+c.ew||0}); });
+  return res;
+}
+
+/* ===================== CUTTING (guillotine) ===================== */
+function packGroup(items, sheet, kerf, trim, canRotate){
+  const UL = sheet.L - 2*trim, UW = sheet.W - 2*trim;
+  const orders = [
+    (a,b)=> b.l*b.w - a.l*a.w,
+    (a,b)=> Math.max(b.l,b.w) - Math.max(a.l,a.w),
+    (a,b)=> b.l - a.l || b.w - a.w,
+    (a,b)=> b.w - a.w || b.l - a.l,
+    (a,b)=> (b.l+b.w) - (a.l+a.w),
+  ];
+  const rules = ['area','short'];
+  let best=null;
+  const too = items.filter(it => !((it.l<=UL && it.w<=UW) || (canRotate && it.w<=UL && it.l<=UW)));
+  const ok = items.filter(it => !too.includes(it));
+  for(const ord of orders) for(const rule of rules){
+    const list = ok.slice().sort(ord);
+    const sheets = [];
+    for(const it of list){
+      let cand=null;
+      for(let si=0; si<sheets.length && !cand; si++){
+        let bestScore=Infinity;
+        sheets[si].free.forEach((f,fi)=>{
+          const opts = [[it.l,it.w,false]]; if(canRotate && it.l!==it.w) opts.push([it.w,it.l,true]);
+          for(const [pw,ph,rot] of opts){
+            if(pw<=f.w && ph<=f.h){
+              const score = rule==='area' ? f.w*f.h - pw*ph : Math.min(f.w-pw, f.h-ph);
+              if(score<bestScore){ bestScore=score; cand={si,fi,pw,ph,rot}; }
+            }
+          }
+        });
+      }
+      if(!cand){ sheets.push({free:[{x:0,y:0,w:UL,h:UW}], placed:[]}); const si=sheets.length-1;
+        const f=sheets[si].free[0];
+        if(it.l<=f.w && it.w<=f.h) cand={si,fi:0,pw:it.l,ph:it.w,rot:false}; else cand={si,fi:0,pw:it.w,ph:it.l,rot:true}; }
+      const sh = sheets[cand.si], f = sh.free[cand.fi];
+      sh.placed.push({...it, x:f.x, y:f.y, pw:cand.pw, ph:cand.ph, rot:cand.rot});
+      sh.free.splice(cand.fi,1);
+      const rw = f.w - cand.pw - kerf, th = f.h - cand.ph - kerf;
+      // choose split that maximises the larger leftover
+      const A = [{x:f.x+cand.pw+kerf,y:f.y,w:rw,h:f.h},{x:f.x,y:f.y+cand.ph+kerf,w:cand.pw,h:th}];
+      const B = [{x:f.x+cand.pw+kerf,y:f.y,w:rw,h:cand.ph},{x:f.x,y:f.y+cand.ph+kerf,w:f.w,h:th}];
+      const big = arr => Math.max(...arr.map(r=>r.w>0&&r.h>0?r.w*r.h:0));
+      const pick = big(A)>=big(B) ? A : B;
+      pick.forEach(r=>{ if(r.w>=20 && r.h>=20) sh.free.push(r); });
+    }
+    const used = sheets.reduce((s,sh)=>s+sh.placed.reduce((a,p)=>a+p.pw*p.ph,0),0);
+    const last = sheets.length ? sheets[sheets.length-1].placed.reduce((a,p)=>a+p.pw*p.ph,0) : 0;
+    const score = sheets.length*1e12 + last;
+    if(!best || score<best.score) best={score, sheets, used};
+  }
+  return {sheets: best?best.sheets:[], used: best?best.used:0, too, UL, UW};
+}
+function cutAll(parts){
+  const st = S.settings;
+  const groups = {};
+  parts.forEach(p=>{
+    const sid = p.mat==='corpus'?st.corpus : p.mat==='facade'?st.facade : st.back;
+    (groups[sid] = groups[sid]||[]);
+    for(let i=0;i<p.qty;i++) groups[sid].push({name:p.name, modName:p.modName, mod:p.mod, l:p.l, w:p.w});
+  });
+  const out=[];
+  for(const sid in groups){
+    const sh = sheetById(sid);
+    const rot = sh.kind==='dvp' || !st.grain;
+    const r = packGroup(groups[sid], sh, +st.kerf, +st.trim, rot);
+    out.push({sheet:sh, rotate:rot, ...r, pieces:groups[sid].length});
+  }
+  return out;
+}
+
+/* ===================== RENDER: inputs ===================== */
+function renderMods(){
+  $('#mods').innerHTML = S.modules.map((m,i)=>`
+    <div class="mod ${m.id===S.sel?'on':''}" data-id="${m.id}" role="button" tabindex="0">
+      <span class="sw" style="background:${modColor(i)}"></span><span class="modno">${i+1}</span>
+      <span class="nm">${esc(m.name)}</span>
+      <span class="dims">${m.W}×${m.H}×${m.D}</span>
+      <button type="button" data-dup="${m.id}" title="Копировать">⧉</button>
+      <button type="button" data-del="${m.id}" title="Удалить">✕</button>
+    </div>`).join('') || '<p class="muted small">Добавьте изделие кнопкой выше.</p>';
+}
+const fld = (k,lab,v,attrs='') => `<label class="f">${lab}<input id="m_${k}" data-k="${k}" type="number" value="${v}" ${attrs}></label>`;
+function renderEditor(){
+  const m = S.modules.find(x=>x.id===S.sel);
+  if(!m){ $('#editor').innerHTML=''; return; }
+  $('#editor').innerHTML = `
+    <div class="fields two"><label class="f">Название<input id="m_name" data-k="name" type="text" value="${esc(m.name)}"></label></div>
+    <div class="label">Габариты, мм</div>
+    <div class="fields">${fld('W','Ширина',m.W,'min="200" step="1"')}${fld('H','Высота',m.H,'min="200" step="1"')}${fld('D','Глубина',m.D,'min="150" step="1"')}</div>
+    <div class="label">Положение в сборке, мм (пусто — авто)</div>
+    <div class="fields"><label class="f">X от левого края<input id="m_x" data-k="x" type="number" min="0" step="1" value="${m.x??''}"></label><label class="f">Y от пола<input id="m_y" data-k="y" type="number" min="0" step="1" value="${m.y??''}"></label></div>
+    <div class="label">Наполнение</div>
+    <div class="fields">${fld('doors','Двери',m.doors,'min="0" max="6"')}${fld('drawers','Ящики',m.drawers,'min="0" max="8"')}${fld('dh','Выс. ящика',m.dh,'min="100" step="5"')}${fld('partitions','Перегородки',m.partitions,'min="0" max="5"')}${fld('shelves','Полок в секции',m.shelves,'min="0" max="12"')}</div>
+    <div class="fields two">
+      <label class="f">Верх<select id="m_top" data-k="top"><option value="solid" ${m.top==='solid'?'selected':''}>Крышка</option><option value="rails" ${m.top==='rails'?'selected':''}>Две царги (под столешницу)</option></select></label>
+      <label class="f">Основание<select id="m_base" data-k="base"><option value="none" ${m.base==='none'?'selected':''}>Без основания</option><option value="legs" ${m.base==='legs'?'selected':''}>Опоры</option><option value="plinth" ${m.base==='plinth'?'selected':''}>Цоколь из ЛДСП</option></select></label>
+      ${m.base==='legs'?fld('legH','Высота опор',m.legH,'min="20"'):''}${m.base==='plinth'?fld('plinthH','Высота цоколя',m.plinthH,'min="40"'):''}
+    </div>
+    <div class="row">
+      <label class="check"><input id="m_removable" type="checkbox" data-k="removable" ${m.removable?'checked':''}> Полки съёмные</label>
+      <label class="check"><input id="m_back" type="checkbox" data-k="back" ${m.back?'checked':''}> Задняя стенка ДВП</label>
+      <label class="check"><input id="m_rod" type="checkbox" data-k="rod" ${m.rod?'checked':''}> Штанга</label>
+      <label class="check"><input id="m_hang" type="checkbox" data-k="hang" ${m.hang?'checked':''}> Навесной</label>
+    </div>`;
+}
+function renderSettings(){
+  const st=S.settings;
+  const opt = (arr, cur) => arr.map(x=>`<option value="${x.id}" ${x.id===cur?'selected':''}>${esc(x.name)}${x.L?` · ${x.L}×${x.W}×${x.T}`:''}</option>`).join('');
+  const ldsp = SHEETS.filter(s=>s.kind==='ldsp'), dvp = SHEETS.filter(s=>s.kind==='dvp');
+  const g = gr => HW.filter(h=>h.g===gr);
+  $('#settings').innerHTML = `
+    <label class="f">ЛДСП корпуса<select id="s_corpus" data-s="corpus">${opt(ldsp,st.corpus)}</select></label>
+    <label class="f">ЛДСП фасадов<select id="s_facade" data-s="facade">${opt(ldsp,st.facade)}</select></label>
+    <label class="f">ДВП (задняя стенка, дно ящиков)<select id="s_back" data-s="back">${opt(dvp,st.back)}</select></label>
+    <label class="f">Кромка<select id="s_edge" data-s="edge">${opt(g('edge'),st.edge)}</select></label>
+    <label class="f">Петли<select id="s_hinge" data-s="hinge">${opt(g('hinge'),st.hinge)}</select></label>
+    <label class="f">Направляющие<select id="s_slide" data-s="slide">${opt(g('slide'),st.slide)}</select></label>
+    <label class="f">Ручки<select id="s_handle" data-s="handle">${opt(g('handle'),st.handle)}</select></label>
+    <label class="f">Опоры<select id="s_leg" data-s="leg">${opt(g('leg'),st.leg)}</select></label>
+    <label class="f">Пропил, мм<input id="s_kerf" data-s="kerf" type="number" min="0" max="10" step="0.5" value="${st.kerf}"></label>
+    <label class="f">Обрезка кромки листа, мм<input id="s_trim" data-s="trim" type="number" min="0" max="30" value="${st.trim}"></label>
+    <label class="f">Распил в Domus<select id="s_cut" data-s="cut"><option value="digital" ${st.cut==='digital'?'selected':''}>Цифровой, 220 ֏/деталь</option><option value="manual" ${st.cut==='manual'?'selected':''}>Ручной, 120 ֏/деталь</option></select></label>
+    <label class="check"><input id="s_grain" type="checkbox" data-s="grain" ${st.grain?'checked':''}> Учитывать текстуру (без поворота)</label>`;
+}
+
+/* ===================== RENDER: results ===================== */
+let R, C;
+function compute(){ R = buildAll(); C = cutAll(R.parts); }
+
+function edgeMeters(parts){
+  return parts.reduce((s,p)=>{ const n=p.el+p.ew; return s + p.qty*(p.el*p.l + p.ew*p.w + n*30)/1000; },0);
+}
+function costs(){
+  const st=S.settings, rows=[];
+  C.forEach(g=>{ const n=g.sheets.length; rows.push({grp:'Листы', name:`${g.sheet.name} ${g.sheet.L}×${g.sheet.W}×${g.sheet.T}`, qty:n, unit:'лист', price:sheetPrice(g.sheet), url:g.sheet.url}); });
+  const em = edgeMeters(R.parts), edge=hwById(st.edge);
+  const emQty = edge.id==='emel' ? Math.ceil(em/50) : Math.ceil(em);
+  rows.push({grp:'Кромка', name:edge.name, qty:emQty, unit: edge.id==='emel'?'уп.':'м', price:priceOf(edge), url:edge.url, verify:!!edge.unitNote, note:edge.unitNote});
+  for(const k in R.hw){
+    const [id,len] = k.split(':'); const it=hwById(id); const q=R.hw[k];
+    const nm = len ? `${it.name}, ${len} мм` : it.name;
+    rows.push({grp:'Фурнитура', name:nm, qty:q, unit: it.g==='slide'?'компл.':'шт.', price:priceOf(it, len?+len:null), url:it.url, verify:!!(it.verify||it.unitNote), note:it.note||it.unitNote});
+  }
+  const pieces = R.parts.reduce((s,p)=>s+p.qty,0);
+  rows.push({grp:'Услуги', name:`Распил в Domus (${st.cut==='digital'?'цифровой':'ручной'})`, qty:pieces, unit:'дет.', price:CUT[st.cut], url:'https://domus.am/kahvouyqi-listeri-ktrvoum'});
+  rows.forEach(r=>r.sum=r.qty*r.price);
+  return {rows, total: rows.reduce((s,r)=>s+r.sum,0), em, pieces};
+}
+
+function renderSummary(){
+  const cs = costs();
+  const sheetsL = C.filter(g=>g.sheet.kind==='ldsp').reduce((s,g)=>s+g.sheets.length,0);
+  const sheetsD = C.filter(g=>g.sheet.kind==='dvp').reduce((s,g)=>s+g.sheets.length,0);
+  const usedL = C.filter(g=>g.sheet.kind==='ldsp').reduce((s,g)=>s+g.used,0);
+  const areaL = C.filter(g=>g.sheet.kind==='ldsp').reduce((s,g)=>s+g.sheets.length*g.UL*g.UW,0);
+  $('#summary').innerHTML = `
+    <div class="kpi"><span>Листов ЛДСП</span><b>${sheetsL}</b><span>заполнение ${areaL?Math.round(usedL/areaL*100):0}%</span></div>
+    <div class="kpi"><span>Листов ДВП</span><b>${sheetsD}</b><span>задние стенки, днища</span></div>
+    <div class="kpi"><span>Деталей</span><b>${cs.pieces}</b><span>кромка ${fmt1(cs.em)} м</span></div>
+    <div class="kpi"><span>Смета</span><b>${fmt(cs.total)} ֏</b><span>материалы + распил</span></div>`;
+  const w = [...R.warns];
+  C.forEach(g=>g.too.forEach(it=>w.push(`«${it.name}» ${it.l}×${it.w} не помещается на лист ${g.sheet.L}×${g.sheet.W}${g.rotate?'':' (поворот запрещён текстурой)'}`)));
+  $('#warns').innerHTML = [...new Set(w)].map(x=>`<div class="warn">${esc(x)}</div>`).join('');
+}
+
+function viewDraw(){
+  if(!S.modules.length) return '<p class="muted">Нет изделий.</p>';
+  return S.modules.map((m,i)=>`<div class="sheet"><div class="cap"><h3>${esc(m.name)}</h3><span class="mono">${m.W} × ${m.H} × ${m.D} мм · ЛДСП ${sheetById(S.settings.corpus).T} мм</span></div><div class="draw">${drawModule(R.mods[i].geo, m, modColor(i))}</div></div>`).join('') +
+  `<div class="legend"><span><svg width="18" height="10"><rect width="18" height="10" fill="var(--board)" stroke="var(--board-edge)"/></svg>корпус</span><span><svg width="18" height="10"><line x1="0" y1="5" x2="18" y2="5" stroke="var(--muted)" stroke-dasharray="3 2"/></svg>полки за фасадом</span><span><svg width="18" height="10"><rect width="18" height="10" fill="none" stroke="var(--accent)" stroke-width="1.5"/></svg>фасады</span></div>`;
+}
+function drawModule(g, m, col){
+  const pad = 70, sc = Math.min(560/g.W, 520/g.H);
+  const w = g.W*sc, h = g.H*sc, X = pad, Y = 30;
+  const y = mm => Y + h - mm*sc; // mm from floor
+  const t = g.t*sc;
+  let s = `<svg viewBox="0 0 ${w+pad*2} ${h+Y+70}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Фасад ${esc(m.name)}" font-family="IBM Plex Mono, monospace" font-size="11">`;
+  const body = (x,yy,ww,hh)=>`<rect x="${x}" y="${yy}" width="${ww}" height="${hh}" fill="var(--board)" stroke="var(--board-edge)" stroke-width="1"/>`;
+  const bodyTop = y(g.H), bodyBot = y(g.legH);
+  // sides
+  s += body(X, bodyTop, t, bodyBot-bodyTop) + body(X+w-t, bodyTop, t, bodyBot-bodyTop);
+  // top
+  if(m.top==='rails'){ s += body(X+t, bodyTop, w-2*t, 100*sc*0.35); }
+  else s += body(X+t, bodyTop, w-2*t, t);
+  // bottom
+  const botY = y(g.legH + g.plH) - t;
+  s += body(X+t, botY, w-2*t, t);
+  if(g.plH) s += body(X+t, y(g.plH), w-2*t, g.plH*sc);
+  if(g.legH){ const lx=[X+12, X+w-22]; if(g.W>900) lx.push(X+w/2-5); lx.forEach(x=> s+=`<rect x="${x}" y="${bodyBot}" width="10" height="${g.legH*sc}" fill="var(--muted)"/>`); }
+  // partitions & shelves
+  const innerBot = g.legH + g.plH + g.t, innerTop = g.H - g.t;
+  let zoneBot = innerBot;
+  if(g.nDr>0 && g.nDoor>0){ zoneBot = innerBot + g.drawerZone; s += body(X+t, y(zoneBot+g.t), w-2*t, t); zoneBot += g.t; }
+  const showInner = !(g.nDr>0 && g.nDoor===0);
+  if(showInner){
+    for(let p=1;p<=g.nP;p++){ const px = X + t + (g.secW*p + g.t*(p-1))*sc; s += body(px, y(innerTop), t, (innerTop-zoneBot)*sc); }
+    for(let k=1;k<=g.nS;k++){ const sy = zoneBot + (innerTop-zoneBot)*k/(g.nS+1); s += `<line x1="${X+t}" y1="${y(sy)}" x2="${X+w-t}" y2="${y(sy)}" stroke="var(--muted)" stroke-width="2" stroke-dasharray="6 4"/>`; }
+    if(m.rod && g.nDoor>0){ const ry = innerTop - 70; s+=`<line x1="${X+t+4}" y1="${y(ry)}" x2="${X+w-t-4}" y2="${y(ry)}" stroke="var(--muted)" stroke-width="3"/>`; }
+  }
+  // facades
+  const fBot = g.legH + g.plH + 2;
+  for(let d=0; d<g.nDr; d++){
+    const fy = fBot + d*g.dh; const fh = g.dh-3;
+    s += `<rect x="${X+2*sc}" y="${y(fy+fh)}" width="${w-4*sc}" height="${fh*sc}" fill="${col}" fill-opacity=".10" stroke="var(--accent)" stroke-width="1.5"/>`;
+    s += `<line x1="${X+w/2-18}" y1="${y(fy+fh/2)}" x2="${X+w/2+18}" y2="${y(fy+fh/2)}" stroke="var(--ink)" stroke-width="3" stroke-linecap="round"/>`;
+  }
+  if(g.nDoor>0){
+    const dH = g.FZ - g.drawerZone, dW = (g.W-4-3*(g.nDoor-1))/g.nDoor, dy = fBot + g.drawerZone;
+    for(let d=0; d<g.nDoor; d++){
+      const dx = X + (2 + d*(dW+3))*sc;
+      s += `<rect x="${dx}" y="${y(dy+dH)}" width="${dW*sc}" height="${dH*sc}" fill="${col}" fill-opacity=".10" stroke="var(--accent)" stroke-width="1.5"/>`;
+      const left = (d%2===0); // hinge side
+      const hx = left ? dx+dW*sc : dx; const tx = left ? dx : dx+dW*sc;
+      s += `<polyline points="${hx},${y(dy+dH)} ${tx},${y(dy+dH/2)} ${hx},${y(dy)}" fill="none" stroke="var(--accent)" stroke-opacity=".45" stroke-dasharray="4 4"/>`;
+      const handleX = left ? dx+dW*sc-12 : dx+12;
+      s += `<line x1="${handleX}" y1="${y(dy+dH/2)-18}" x2="${handleX}" y2="${y(dy+dH/2)+18}" stroke="var(--ink)" stroke-width="3" stroke-linecap="round"/>`;
+      s += `<text x="${dx+dW*sc/2}" y="${y(dy+dH)+16}" text-anchor="middle" fill="var(--muted)">${Math.round(dW)}×${Math.round(dH)}</text>`;
+    }
+  }
+  // dimensions
+  const dimY = Y+h+28;
+  s += `<line x1="${X}" y1="${dimY}" x2="${X+w}" y2="${dimY}" stroke="var(--ink)"/><line x1="${X}" y1="${dimY-6}" x2="${X}" y2="${dimY+6}" stroke="var(--ink)"/><line x1="${X+w}" y1="${dimY-6}" x2="${X+w}" y2="${dimY+6}" stroke="var(--ink)"/>`;
+  s += `<text x="${X+w/2}" y="${dimY-6}" text-anchor="middle" fill="var(--ink)" font-size="13">${g.W}</text>`;
+  const dimX = X-28;
+  s += `<line x1="${dimX}" y1="${Y}" x2="${dimX}" y2="${Y+h}" stroke="var(--ink)"/><line x1="${dimX-6}" y1="${Y}" x2="${dimX+6}" y2="${Y}" stroke="var(--ink)"/><line x1="${dimX-6}" y1="${Y+h}" x2="${dimX+6}" y2="${Y+h}" stroke="var(--ink)"/>`;
+  s += `<text x="${dimX-6}" y="${Y+h/2}" text-anchor="middle" fill="var(--ink)" font-size="13" transform="rotate(-90 ${dimX-6} ${Y+h/2})">${g.H}</text>`;
+  s += `<line x1="0" y1="${Y+h}" x2="${w+pad*2}" y2="${Y+h}" stroke="var(--muted)" stroke-width=".5"/>`;
+  s += `<text x="${X+w}" y="${dimY+22}" text-anchor="end" fill="var(--muted)">глубина ${g.Dp} мм · вид спереди</text>`;
+  return s + '</svg>';
+}
+
+function edgeStr(p){ const a=[]; if(p.el) a.push(`${p.el}×${p.l}`); if(p.ew) a.push(`${p.ew}×${p.w}`); return a.join(' + ') || '—'; }
+function matName(mat){ const st=S.settings; return mat==='corpus'?'ЛДСП корпус': mat==='facade'?'ЛДСП фасад':'ДВП'; }
+function viewParts(){
+  let html = `<div class="row" style="justify-content:space-between"><p class="hint" style="margin:0">Первый размер — вдоль текстуры. Кромка: «2×800» = две стороны по 800 мм.</p><button type="button" id="btnCsv">Копировать как таблицу</button></div><div class="tblwrap"><table><thead><tr><th>№</th><th>Деталь</th><th class="n">Длина</th><th class="n">Ширина</th><th class="n">Кол.</th><th>Материал</th><th>Кромка</th></tr></thead><tbody>`;
+  let n=0, cur=null;
+  R.parts.forEach(p=>{ if(p.modName!==cur){ cur=p.modName; html+=`<tr class="grp"><td colspan="7">${esc(cur)}</td></tr>`; } n++;
+    html+=`<tr><td class="n">${n}</td><td>${esc(p.name)}</td><td class="n">${p.l}</td><td class="n">${p.w}</td><td class="n">${p.qty}</td><td>${matName(p.mat)}</td><td class="n">${edgeStr(p)}</td></tr>`; });
+  html += `</tbody></table></div>`;
+  html += `<h3>Свои детали</h3><p class="hint" style="margin:0">Для нестандартного дизайна: впишите детали вручную, они попадут в раскрой и смету.</p>
+  <div class="tblwrap custom"><table><thead><tr><th>Название</th><th class="n">Длина</th><th class="n">Ширина</th><th class="n">Кол.</th><th>Материал</th><th class="n">Кромка дл.</th><th class="n">Кромка шир.</th><th></th></tr></thead><tbody>`+
+  S.custom.map((c,i)=>`<tr data-ci="${i}"><td><input id="c${i}_name" data-c="name" value="${esc(c.name)}"></td><td><input id="c${i}_l" data-c="l" type="number" value="${c.l}"></td><td><input id="c${i}_w" data-c="w" type="number" value="${c.w}"></td><td><input id="c${i}_qty" data-c="qty" type="number" min="0" value="${c.qty}"></td><td><select id="c${i}_mat" data-c="mat"><option value="corpus" ${c.mat==='corpus'?'selected':''}>Корпус</option><option value="facade" ${c.mat==='facade'?'selected':''}>Фасад</option><option value="back" ${c.mat==='back'?'selected':''}>ДВП</option></select></td><td><input id="c${i}_el" data-c="el" type="number" min="0" max="2" value="${c.el}"></td><td><input id="c${i}_ew" data-c="ew" type="number" min="0" max="2" value="${c.ew}"></td><td><button type="button" data-cdel="${i}">✕</button></td></tr>`).join('')+
+  `</tbody></table></div><div><button type="button" id="btnCadd">Добавить деталь</button></div>`;
+  return html;
+}
+function viewCut(){
+  const st=S.settings;
+  let html = `<p class="hint" style="margin:0">Гильотинный раскрой с пропилом ${st.kerf} мм и обрезкой ${st.trim} мм по краю. Ось X листа — вдоль текстуры. Цвет детали = изделие.</p>`;
+  C.forEach(g=>{
+    g.sheets.forEach((sh,si)=>{
+      const used = sh.placed.reduce((a,p)=>a+p.pw*p.ph,0), eff = used/(g.UL*g.UW)*100;
+      const L=g.sheet.L, Wd=g.sheet.W, tr=+st.trim;
+      let svg = `<svg viewBox="0 0 ${L} ${Wd}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Лист ${si+1}" font-family="IBM Plex Mono, monospace">`;
+      svg += `<defs><pattern id="hatch${si}${g.sheet.id}" width="40" height="40" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="40" stroke="var(--muted)" stroke-opacity=".35" stroke-width="6"/></pattern></defs>`;
+      svg += `<rect width="${L}" height="${Wd}" fill="var(--waste)"/><rect width="${L}" height="${Wd}" fill="url(#hatch${si}${g.sheet.id})"/>`;
+      sh.placed.forEach(p=>{
+        const x=tr+p.x, y=tr+p.y, c = p.mod>=0 ? modColor(p.mod) : '#888';
+        const fs = Math.max(26, Math.min(70, Math.min(p.pw, p.ph)/5));
+        svg += `<g><rect x="${x}" y="${y}" width="${p.pw}" height="${p.ph}" fill="var(--board)" stroke="var(--board-edge)" stroke-width="4"/><rect x="${x}" y="${y}" width="${p.pw}" height="14" fill="${c}"/>`;
+        if(p.pw>180 && p.ph>120){
+          svg += `<text x="${x+p.pw/2}" y="${y+p.ph/2}" text-anchor="middle" font-size="${fs}" fill="var(--ink)">${p.pw}×${p.ph}${p.rot?' ↻':''}</text>`;
+          if(p.ph>240 && p.pw>300) svg += `<text x="${x+p.pw/2}" y="${y+p.ph/2+fs*1.2}" text-anchor="middle" font-size="${fs*0.7}" fill="var(--muted)">${esc(p.name)}</text>`;
+        }
+        svg += `<title>${esc(p.modName)}: ${esc(p.name)} ${p.l}×${p.w}${p.rot?' (повёрнута)':''}</title></g>`;
+      });
+      svg += `</svg>`;
+      html += `<div class="sheet"><div class="cap"><h3>${esc(g.sheet.name)} — лист ${si+1} из ${g.sheets.length}</h3><span class="mono">${L}×${Wd}×${g.sheet.T} · деталей ${sh.placed.length} · заполнение ${Math.round(eff)}%</span></div><div class="svgbox">${svg}</div></div>`;
+    });
+  });
+  const legend = S.modules.map((m,i)=>`<span><i class="sw" style="background:${modColor(i)}"></i>${esc(m.name)}</span>`).join('') + (S.custom.length?`<span><i class="sw" style="background:#888"></i>Доп. детали</span>`:'') + `<span>↻ деталь повёрнута</span>`;
+  return html + `<div class="legend">${legend}</div>`;
+}
+function viewHw(){
+  const cs = costs();
+  const rows = cs.rows.filter(r=>r.grp==='Фурнитура'||r.grp==='Кромка');
+  return `<div class="tblwrap"><table><thead><tr><th>Позиция</th><th class="n">Кол.</th><th>Ед.</th><th>Почему столько</th></tr></thead><tbody>`+
+    rows.map(r=>`<tr><td>${r.url?`<a href="${r.url}" target="_blank" rel="noopener">${esc(r.name)}</a>`:esc(r.name)}${r.verify?`<span class="tag">${esc(r.note||'уточнить')}</span>`:''}</td><td class="n">${fmt(r.qty)}</td><td>${r.unit}</td><td class="small muted">${why(r.name)}</td></tr>`).join('')+
+    `</tbody></table></div><p class="hint">Петли: 2 шт. на дверь до 900 мм, 3 — до 1600, 4 — до 2000, 5 — выше. Конфирматы: ${'2–3'} на стык (по глубине), 8 на ящик. Направляющие подобраны по глубине корпуса минус 30 мм и толщина ДВП.</p>`;
+}
+function why(n){
+  if(/Петля/.test(n)) return 'по высоте дверей';
+  if(/Направляющие|Matrix/.test(n)) return '1 комплект на ящик';
+  if(/Ручка|Без ручек/.test(n)) return '1 на дверь и ящик';
+  if(/Конфирмат/.test(n)) return 'стыки корпуса и коробов ящиков';
+  if(/4×16/.test(n)) return '4 на петлю, 12 на ящик';
+  if(/3.5×16/.test(n)) return 'ДВП: шаг 150 мм по периметру';
+  if(/Полкодержатель/.test(n)) return '4 на съёмную полку';
+  if(/Опора|Подпятник/.test(n)) return '4 шт., 6 при ширине > 900';
+  if(/Кромка/.test(n)) return 'по таблице кромок + 30 мм на торец';
+  if(/Штанга/.test(n)) return '1 на секцию';
+  return '';
+}
+function viewCost(){
+  const cs = costs();
+  let html = `<div class="tblwrap"><table><thead><tr><th>Позиция</th><th class="n">Кол.</th><th>Ед.</th><th class="n">Цена, ֏</th><th class="n">Сумма, ֏</th></tr></thead><tbody>`;
+  let cur=null;
+  cs.rows.forEach(r=>{ if(r.grp!==cur){ cur=r.grp; html+=`<tr class="grp"><td colspan="5">${cur}</td></tr>`; }
+    html += `<tr><td>${r.url?`<a href="${r.url}" target="_blank" rel="noopener">${esc(r.name)}</a>`:esc(r.name)}${r.verify?`<span class="tag">уточнить</span>`:''}</td><td class="n">${fmt(r.qty)}</td><td>${r.unit}</td><td class="n">${fmt1(r.price)}</td><td class="n">${fmt(r.sum)}</td></tr>`; });
+  html += `</tbody><tfoot><tr><td colspan="4">Итого</td><td class="n">${fmt(cs.total)} ֏</td></tr></tfoot></table></div>
+  <p class="hint">Цены — витрина domus.am на 07.10.2026. Позиции с пометкой «уточнить» не найдены в каталоге или у них неясна единица продажи; цены правятся во вкладке «Каталог и цены». Поклейка кромки в смету не входит.</p>`;
+  return html;
+}
+function viewCat(){
+  let html = `<p class="hint" style="margin:0">Меняйте цены прямо здесь — смета пересчитается. Пустое поле = цена с сайта.</p><h3>Плиты</h3><div class="tblwrap"><table><thead><tr><th>Декор</th><th class="n">Формат</th><th class="n">Цена сайта</th><th class="n">Своя цена</th></tr></thead><tbody>`;
+  html += SHEETS.map(s=>`<tr><td><a href="${s.url}" target="_blank" rel="noopener">${esc(s.name)}</a></td><td class="n">${s.L}×${s.W}×${s.T}</td><td class="n">${fmt(s.price)}</td><td class="n"><input id="p_sheet_${s.id}" data-p="sheet:${s.id}" type="number" style="width:100px" value="${S.prices['sheet:'+s.id]??''}"></td></tr>`).join('');
+  html += `</tbody></table></div><h3>Фурнитура и кромка</h3><div class="tblwrap"><table><thead><tr><th>Позиция</th><th class="n">Цена сайта</th><th class="n">Своя цена</th></tr></thead><tbody>`;
+  HW.forEach(h=>{
+    if(h.series){ Object.keys(h.series).forEach(len=>{ const k=h.id+':'+len; html+=`<tr><td>${h.url?`<a href="${h.url}" target="_blank" rel="noopener">${esc(h.name)}</a>`:esc(h.name)}, ${len} мм${h.unitNote?`<span class="tag">${esc(h.unitNote)}</span>`:''}</td><td class="n">${fmt(h.series[len])}</td><td class="n"><input id="p_${h.id}_${len}" data-p="${k}" type="number" style="width:100px" value="${S.prices[k]??''}"></td></tr>`; }); }
+    else html+=`<tr><td>${h.url?`<a href="${h.url}" target="_blank" rel="noopener">${esc(h.name)}</a>`:esc(h.name)}${(h.verify||h.unitNote)?`<span class="tag">${esc(h.note||h.unitNote)}</span>`:''}</td><td class="n">${fmt1(h.price)}</td><td class="n"><input id="p_${h.id}" data-p="${h.id}" type="number" step="0.1" style="width:100px" value="${S.prices[h.id]??''}"></td></tr>`;
+  });
+  html += `</tbody></table></div><p class="hint">Распил: ручной ${CUT.manual} ֏, цифровой ${CUT.digital} ֏ за деталь — <a href="https://domus.am/kahvouyqi-listeri-ktrvoum" target="_blank" rel="noopener">условия Domus</a>. ЛДСП 16 мм на domus.am сейчас нет, только 18 мм.</p>`;
+  return html;
+}
+
+function renderView(){
+  document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on', b.dataset.t===S.tab));
+  const v = {draw:viewDraw, parts:viewParts, cut:viewCut, hw:viewHw, cost:viewCost, cat:viewCat}[S.tab] || viewDraw;
+  $('#view').innerHTML = `<div style="display:grid;gap:14px">${v()}</div>`;
+}
+function refresh(full){
+  compute(); renderSummary(); renderView(); renderMods(); scheduleDrawing();
+  if(full){ renderEditor(); renderSettings(); }
+  save();
+}
+
+/* ===================== EVENTS ===================== */
+$('#btnAdd').onclick = ()=>{ const m=mkMod($('#addType').value); S.modules.push(m); S.sel=m.id; refresh(true); };
+$('#btnReset').onclick = ()=>{ S = sample(); renderAiSummary(); syncTitle(); refresh(true); };
+$('#mods').addEventListener('click', e=>{
+  const del=e.target.closest('[data-del]'), dup=e.target.closest('[data-dup]');
+  if(del){ const id=+del.dataset.del; S.modules=S.modules.filter(m=>m.id!==id); if(S.sel===id) S.sel=S.modules[0]?.id; refresh(true); return; }
+  if(dup){ const src=S.modules.find(m=>m.id===+dup.dataset.dup); const m={...JSON.parse(JSON.stringify(src)), id:uid++, name:src.name+' (копия)'}; S.modules.push(m); S.sel=m.id; refresh(true); return; }
+  const row=e.target.closest('.mod'); if(row){ S.sel=+row.dataset.id; renderMods(); renderEditor(); }
+});
+$('#mods').addEventListener('keydown', e=>{ if(e.key==='Enter'){ const row=e.target.closest('.mod'); if(row){ S.sel=+row.dataset.id; renderMods(); renderEditor(); } } });
+$('#editor').addEventListener('input', e=>{
+  const k=e.target.dataset.k; if(!k) return; const m=S.modules.find(x=>x.id===S.sel);
+  if(e.target.type==='checkbox') m[k]=e.target.checked;
+  else if(e.target.type==='number') m[k]= e.target.value==='' ? ((k==='x'||k==='y') ? null : 0) : +e.target.value;
+  else m[k]=e.target.value;
+  refresh(k==='base');
+});
+$('#settings').addEventListener('input', e=>{
+  const k=e.target.dataset.s; if(!k) return;
+  S.settings[k] = e.target.type==='checkbox' ? e.target.checked : (e.target.type==='number' ? +e.target.value : e.target.value);
+  refresh(false);
+});
+$('#tabs').addEventListener('click', e=>{ const b=e.target.closest('button'); if(b){ S.tab=b.dataset.t; renderView(); save(); } });
+$('#view').addEventListener('input', e=>{
+  const p=e.target.dataset.p;
+  if(p){ S.prices[p]=e.target.value; compute(); renderSummary(); save(); return; }
+  const c=e.target.dataset.c;
+  if(c){ const i=+e.target.closest('tr').dataset.ci; S.custom[i][c] = (e.target.type==='number') ? +e.target.value : e.target.value; compute(); renderSummary(); save(); }
+});
+$('#view').addEventListener('change', e=>{ if(e.target.dataset.c){ renderView(); } });
+$('#view').addEventListener('click', e=>{
+  if(e.target.id==='btnCadd'){ S.custom.push({name:'Деталь', l:600, w:300, qty:1, mat:'corpus', el:1, ew:0}); refresh(false); }
+  const cd=e.target.closest('[data-cdel]'); if(cd){ S.custom.splice(+cd.dataset.cdel,1); refresh(false); }
+  if(e.target.id==='btnCsv'){
+    const lines=['Изделие\tДеталь\tДлина\tШирина\tКол.\tМатериал\tКромка'].concat(R.parts.map(p=>[p.modName,p.name,p.l,p.w,p.qty,matName(p.mat),edgeStr(p)].join('\t')));
+    const txt=lines.join('\n'), btn=e.target;
+    const done=()=>{ btn.textContent='Скопировано'; setTimeout(()=>btn.textContent='Копировать как таблицу',1500); };
+    (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(done).catch(()=>{ const ta=document.createElement('textarea'); ta.value=txt; btn.after(ta); ta.select(); });
+  }
+});
+/* ===================== ASSEMBLY DRAWING (rendered by the server as SVG) ===================== */
+var DRAW = {timer:null, seq:0, svg:''};
+function drawingBody(){
+  return JSON.stringify({modules:S.modules.map(({id,...m})=>m), thickness:sheetById(S.settings.corpus).T, title:S.title||null});
+}
+function scheduleDrawing(){ clearTimeout(DRAW.timer); DRAW.timer = setTimeout(loadDrawing, 250); }
+async function loadDrawing(){
+  const box = $('#asmBox'), my = ++DRAW.seq;
+  if(!S.modules.length){ DRAW.svg=''; box.innerHTML='<p class="muted" style="padding:16px">Нет изделий. Загрузите фото или добавьте модуль ниже.</p>'; return; }
+  try{
+    const res = await fetch('/api/drawing', {method:'POST', headers:{'Content-Type':'application/json'}, body:drawingBody()});
+    const txt = await res.text();
+    if(my !== DRAW.seq) return;
+    if(!res.ok){ let msg; try{ msg = JSON.parse(txt).error; }catch(e){} throw new Error(msg || `сервер ответил ${res.status}`); }
+    DRAW.svg = txt; box.innerHTML = txt;
+  }catch(e){
+    if(my === DRAW.seq) box.innerHTML = `<p style="padding:16px;color:var(--warn)">Чертёж не построен: ${esc(e.message||'сервер недоступен')}</p>`;
+  }
+}
+function fileBase(){ return (S.title||'sborka').trim().replace(/[^\p{L}\p{N}]+/gu,'-').replace(/^-+|-+$/g,'').toLowerCase() || 'sborka'; }
+function saveBlob(blob, name){
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.append(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
+$('#dlSvg').addEventListener('click', ()=>{ if(DRAW.svg) saveBlob(new Blob([DRAW.svg], {type:'image/svg+xml'}), fileBase()+'.svg'); });
+$('#dlPng').addEventListener('click', async ()=>{
+  const el = $('#asmBox svg'); if(!el) return;
+  const w = el.width.baseVal.value || 1800, h = el.height.baseVal.value || 1200, k = 1.5;
+  const url = URL.createObjectURL(new Blob([DRAW.svg], {type:'image/svg+xml'})), img = new Image();
+  try{
+    await new Promise((ok, fail)=>{ img.onload = ok; img.onerror = fail; img.src = url; });
+    const c = document.createElement('canvas'); c.width = Math.round(w*k); c.height = Math.round(h*k);
+    const g = c.getContext('2d'); g.fillStyle = '#ffffff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+    c.toBlob(b=>saveBlob(b, fileBase()+'.png'), 'image/png');
+  }finally{ URL.revokeObjectURL(url); }
+});
+function syncTitle(){ $('#projTitle').value = S.title || ''; }
+$('#projTitle').addEventListener('input', e=>{ S.title = e.target.value; save(); scheduleDrawing(); });
+
+/* ===================== STEP 1: photo → backend → Claude → modules ===================== */
+const AI = {files:[], ctl:null, maxCount:3, configured:false};
+function aiThumbs(){
+  $('#aiThumbs').innerHTML = '';
+  AI.files.forEach(f=>{ const img = document.createElement('img'); img.alt = f.name; img.src = URL.createObjectURL(f); $('#aiThumbs').append(img); });
+  $('#aiDropTxt').textContent = AI.files.length ? `Выбрано фото: ${AI.files.length}. Нажмите, чтобы заменить` : `или перетащите сюда (до ${AI.maxCount} фото): фото, рендер или эскиз от руки`;
+}
+function aiSetFiles(list){ AI.files = [...list].filter(f=>/^image\//.test(f.type)).slice(0, AI.maxCount); aiThumbs(); }
+$('#aiFile').addEventListener('change', e=>aiSetFiles(e.target.files));
+const drop = $('#aiDrop');
+['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev, e=>{ e.preventDefault(); drop.classList.add('over'); }));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev, e=>{ e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', e=>{ if(e.dataTransfer?.files?.length) aiSetFiles(e.dataTransfer.files); });
+
+// Shrink to ≤1568 px on the long side and re-encode as JPEG: faster upload, fewer image tokens.
+async function toPayload(file){
+  const MAX = 1568;
+  try{
+    const bmp = await createImageBitmap(file);
+    const k = Math.min(1, MAX/Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas'); c.width = Math.round(bmp.width*k); c.height = Math.round(bmp.height*k);
+    const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(bmp, 0, 0, c.width, c.height);
+    const blob = await new Promise(r=>c.toBlob(r, 'image/jpeg', 0.85));
+    return {mediaType:'image/jpeg', data: await b64(blob)};
+  }catch(e){ return {mediaType:file.type, data: await b64(file)}; }
+}
+function b64(blob){ return new Promise((ok, fail)=>{ const fr = new FileReader(); fr.onload = ()=>ok(String(fr.result).split(',')[1]); fr.onerror = fail; fr.readAsDataURL(blob); }); }
+
+function aiStatus(kind, text){
+  const out = $('#aiOut'); out.hidden = false;
+  out.innerHTML = `<span class="${kind==='err'?'err':kind==='ok'?'okmsg':'muted'}">${esc(text)}</span>`;
+}
+function renderAiSummary(){
+  const a = S.ai, box = $('#aiSummary');
+  if(!a){ box.hidden = true; box.innerHTML = ''; return; }
+  box.hidden = false;
+  box.innerHTML = `<div><b>Claude:</b> ${esc(a.summary || 'конструкция получена')}</div>`
+    + (a.notes?.length ? `<ul>${a.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul>` : '')
+    + (S.prev ? `<div><button type="button" class="ghost" id="aiUndo">Вернуть прежний проект</button></div>` : '');
+}
+$('#aiSummary').addEventListener('click', e=>{
+  if(e.target.id !== 'aiUndo' || !S.prev) return;
+  S.modules = S.prev.modules; S.custom = S.prev.custom; S.title = S.prev.title; S.ai = null; S.prev = null;
+  uid = Math.max(0, ...S.modules.map(m=>m.id)) + 1; S.sel = S.modules[0]?.id;
+  renderAiSummary(); syncTitle(); refresh(true); aiStatus('ok', 'Прежний проект восстановлен.');
+});
+function applyProposal(p){
+  const append = $('#aiAppendChk').checked && S.modules.length > 0;
+  S.prev = {modules:JSON.parse(JSON.stringify(S.modules)), custom:JSON.parse(JSON.stringify(S.custom)), title:S.title};
+  const mods = p.modules.map(fromSpec);
+  if(append){
+    const right = Math.max(0, ...S.modules.map(m=>m.x!=null ? m.x + m.W : 0)) || S.modules.reduce((a, m)=>a + m.W, 0);
+    mods.forEach(m=>{ if(m.x != null) m.x += right; });
+    S.modules = S.modules.concat(mods);
+  }else{
+    S.modules = mods; S.custom = []; S.title = '';
+  }
+  S.ai = {summary:p.summary, notes:p.notes || []};
+  S.sel = mods[0]?.id ?? S.sel; S.tab = 'parts';
+  renderAiSummary(); syncTitle(); refresh(true);
+  aiStatus('ok', `Готово: ${mods.length} ${plural(mods.length,'модуль','модуля','модулей')}. Чертёж, деталировка и смета обновлены ниже.`);
+  $('#asmBox').scrollIntoView({behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block:'start'});
+}
+function plural(n, one, few, many){ const a = n%10, b = n%100; return a===1 && b!==11 ? one : a>=2 && a<=4 && (b<10 || b>=20) ? few : many; }
+
+async function api(path, body, signal){
+  const res = await fetch(path, {method:'POST', headers:{'Content-Type':'application/json'}, body, signal});
+  let data = null; try{ data = await res.json(); }catch(e){}
+  if(!res.ok) throw new Error(data?.error || `Сервер ответил ${res.status}`);
+  return data;
+}
+$('#aiGo').addEventListener('click', async ()=>{
+  const note = $('#aiNote').value.trim();
+  if(!AI.files.length && !note){ aiStatus('err', 'Добавьте фото или опишите мебель в пожеланиях.'); return; }
+  if(!AI.configured){ aiStatus('err', 'Claude не подключён: задайте ANTHROPIC_API_KEY и перезапустите приложение.'); return; }
+  AI.ctl = new AbortController(); $('#aiGo').disabled = true; $('#aiStop').hidden = false;
+  aiStatus('busy', AI.files.length ? 'Отправляю фото в Claude… обычно 20–60 секунд.' : 'Claude думает…');
+  try{
+    const images = await Promise.all(AI.files.map(toPayload));
+    const num = id=>{ const v = +$(id).value; return v > 0 ? v : null; };
+    const body = JSON.stringify({width:num('#aiW'), height:num('#aiH'), depth:num('#aiD'), notes:note,
+      thickness:sheetById(S.settings.corpus).T, images});
+    const p = await api('/api/analyze', body, AI.ctl.signal);
+    if(p.drawingSvg){ DRAW.svg = p.drawingSvg; $('#asmBox').innerHTML = p.drawingSvg; }
+    applyProposal(p);
+  }catch(e){
+    aiStatus('err', e.name === 'AbortError' ? 'Остановлено.' : (e.message || 'Не удалось связаться с сервером.'));
+  }finally{ $('#aiGo').disabled = false; $('#aiStop').hidden = true; }
+});
+$('#aiStop').addEventListener('click', ()=>AI.ctl?.abort());
+$('#aiJsonGo').addEventListener('click', async ()=>{
+  try{ applyProposal(await api('/api/proposal/normalize', $('#aiJson').value)); }
+  catch(e){ aiStatus('err', e.message || 'Не удалось прочитать JSON.'); }
+});
+
+/* ===================== START ===================== */
+refresh(true); renderAiSummary(); syncTitle();
+(async ()=>{
+  const chip = $('#aiModel');
+  try{
+    const s = await (await fetch('/api/status')).json();
+    AI.configured = !!s.claudeConfigured; AI.maxCount = s.maxImages || 3; aiThumbs();
+    chip.textContent = AI.configured ? `Claude: ${s.model}` : 'Claude не подключён';
+    chip.className = 'chip ' + (AI.configured ? 'ok' : 'bad');
+    if(!AI.configured){ $('#aiOff').hidden = false; $('#aiImport').open = true; }
+  }catch(e){
+    chip.textContent = 'Сервер недоступен'; chip.className = 'chip bad';
+    $('#aiOff').textContent = 'Сервер недоступен. Запустите приложение и обновите страницу.'; $('#aiOff').hidden = false;
+  }
+})();
+</script>
+</body>
+</html>
