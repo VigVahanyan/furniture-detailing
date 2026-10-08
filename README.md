@@ -10,6 +10,7 @@ A small web app for cabinet furniture made from laminated chipboard (LDSP). Uplo
 - **Module drawings**: a front view of each module on its own.
 - **Cut list**: every panel with size, material, grain direction and edge banding.
 - **Sheet nesting**: guillotine cutting maps for each sheet with kerf, edge trim and grain lock, plus the sheet count.
+- **Assembly manual**: a step-by-step guide for every module (bottom and sides, top, partitions, plinth or legs, back, shelves, drawers, doors, installation) with sketches, printable to PDF.
 - **Hardware**: hinges, drawer slides, handles, legs, confirmat screws, shelf pins and screws.
 - **Estimate**: prices from [domus.am](https://domus.am) (Yerevan), including the store's per-piece cutting service. Prices are editable.
 
