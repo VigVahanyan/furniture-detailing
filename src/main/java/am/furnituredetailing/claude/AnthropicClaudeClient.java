@@ -99,7 +99,16 @@ public class AnthropicClaudeClient implements ClaudeGateway {
             }
         }
         if (text.isEmpty()) {
-            throw new ClaudeException(502, "Claude returned no text");
+            String stop = json.path("stop_reason").asText("?");
+            StringBuilder types = new StringBuilder();
+            for (JsonNode block : json.path("content")) types.append(types.isEmpty() ? "" : ",").append(block.path("type").asText("?"));
+            log.log(System.Logger.Level.WARNING, "Claude returned no text: stop_reason=" + stop + ", blocks=[" + types + "], usage=" + json.path("usage"));
+            String why = switch (stop) {
+                case "refusal" -> "Claude отказался отвечать на этот запрос (попробуйте другое фото или формулировку)";
+                case "max_tokens" -> "ответ не поместился в лимит токенов: увеличьте CLAUDE_MAX_TOKENS";
+                default -> "stop_reason=" + stop;
+            };
+            throw new ClaudeException(502, "Claude returned no text: " + why);
         }
         if ("max_tokens".equals(json.path("stop_reason").asText())) {
             log.log(System.Logger.Level.WARNING, "Claude answer hit max_tokens; JSON may be incomplete");
