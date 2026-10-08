@@ -31,7 +31,7 @@ import java.util.concurrent.Executors;
  * <pre>
  * GET  /                      constructor UI
  * GET  /api/status            {claudeConfigured, model, maxImages}
- * POST /api/analyze           {width,height,depth,notes,thickness,images:[{mediaType,data}]} → proposal + drawingSvg
+ * POST /api/analyze           {width,height,depth,notes,thickness,images:[{mediaType,data,kind?"room"}]} → proposal + drawingSvg
  * POST /api/proposal/normalize   any text containing proposal JSON → normalized proposal
  * POST /api/drawing           {modules, thickness, title} → assembly drawing (image/svg+xml)
  * </pre>
@@ -99,12 +99,13 @@ public class ApiServer {
 
     private Object analyze(byte[] body) throws IOException {
         AnalyzeRequest req = mapper.readValue(body, AnalyzeRequest.class);
-        List<ImageInput> images = req.images() == null ? List.of() : req.images().stream()
+        List<AnalyzeRequest.Image> sent = req.images() == null ? List.<AnalyzeRequest.Image>of() : req.images().stream()
                 .filter(i -> i != null && i.data() != null && !i.data().isBlank())
-                .map(ApiServer::decode)
                 .toList();
+        List<ImageInput> images = sent.stream().filter(i -> !i.isRoom()).map(ApiServer::decode).toList();
+        List<ImageInput> room = sent.stream().filter(AnalyzeRequest.Image::isRoom).map(ApiServer::decode).toList();
         int thickness = req.thickness() == null || req.thickness() <= 0 ? 18 : req.thickness();
-        DesignProposal p = service.analyze(new DesignRequest(req.width(), req.height(), req.depth(), req.notes(), thickness), images);
+        DesignProposal p = service.analyze(new DesignRequest(req.width(), req.height(), req.depth(), req.notes(), thickness), images, room);
         return AnalysisResult.of(p, AssemblyDrawing.render(p.modules(), thickness, null));
     }
 

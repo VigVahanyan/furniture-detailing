@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Stream;
 
 /**
  * Photo + sizes → Claude → validated {@link DesignProposal}.
@@ -17,6 +18,7 @@ public class DesignService {
 
     private static final System.Logger log = System.getLogger(DesignService.class.getName());
     static final Set<String> IMAGE_TYPES = Set.of("image/jpeg", "image/png", "image/webp", "image/gif");
+    static final int MAX_ROOM_IMAGES = 2;
     static final int MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
     private final ClaudeGateway claude;
@@ -30,9 +32,19 @@ public class DesignService {
     }
 
     public DesignProposal analyze(DesignRequest request, List<ImageInput> images) {
-        validate(request, images);
-        String prompt = FurniturePrompt.build(request, images.size());
-        String answer = claude.ask(prompt, images);
+        return analyze(request, images, List.of());
+    }
+
+    /**
+     * @param pieceImages photos/sketches of the furniture itself
+     * @param roomImages  photos of the space it will stand in; sent after the piece images
+     */
+    public DesignProposal analyze(DesignRequest request, List<ImageInput> pieceImages, List<ImageInput> roomImages) {
+        validate(request, pieceImages, roomImages);
+        List<ImageInput> all = new java.util.ArrayList<>(pieceImages);
+        all.addAll(roomImages);
+        String prompt = FurniturePrompt.build(request, pieceImages.size(), roomImages.size());
+        String answer = claude.ask(prompt, all);
         return parse(answer);
     }
 
@@ -53,7 +65,7 @@ public class DesignService {
         return proposal;
     }
 
-    private void validate(DesignRequest request, List<ImageInput> images) {
+    private void validate(DesignRequest request, List<ImageInput> images, List<ImageInput> roomImages) {
         boolean hasNotes = request.notes() != null && !request.notes().isBlank();
         if (images.isEmpty() && !hasNotes) {
             throw new InvalidDesignInputException("Добавьте фото или опишите мебель.");
@@ -61,7 +73,10 @@ public class DesignService {
         if (images.size() > props.maxImages()) {
             throw new InvalidDesignInputException("Не больше " + props.maxImages() + " фото за раз.");
         }
-        for (ImageInput img : images) {
+        if (roomImages.size() > MAX_ROOM_IMAGES) {
+            throw new InvalidDesignInputException("Не больше " + MAX_ROOM_IMAGES + " фото помещения.");
+        }
+        for (ImageInput img : Stream.concat(images.stream(), roomImages.stream()).toList()) {
             if (!IMAGE_TYPES.contains(img.mediaType())) {
                 throw new InvalidDesignInputException("Формат " + img.mediaType() + " не поддерживается: нужен JPG, PNG, WebP или GIF.");
             }

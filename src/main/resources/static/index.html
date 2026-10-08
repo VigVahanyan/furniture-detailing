@@ -112,6 +112,12 @@ textarea{font:inherit;color:var(--ink);background:var(--panel);border:1px solid 
 .stepno{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--ink);color:var(--bg);font-family:var(--f-display);font-weight:700;font-size:13px;flex:none}
 .hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
 @media (max-width:820px){.hero{grid-template-columns:minmax(0,1fr)}}
+.dropcol{display:grid;gap:12px}
+.drop.room{padding:12px;font-size:12px}
+.drop.room .thumbs img{width:72px;height:72px}
+.upbtn.ghostbtn{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+.sitenotes{border-left:3px solid var(--warn);background:var(--warn-bg);color:var(--warn);padding:8px 12px;border-radius:0 4px 4px 0;font-size:13px}
+.sitenotes ul{margin:4px 0 0;padding-left:18px}
 .drop.big{min-height:220px;align-content:center;padding:18px}
 .drop.big .thumbs img{width:140px;height:140px}
 .chip{font-size:12px;padding:3px 10px;border-radius:12px;background:var(--soft);color:var(--muted);white-space:nowrap}
@@ -156,12 +162,20 @@ details summary{cursor:pointer;font-weight:600}
   <section class="panel step" aria-labelledby="s1h">
     <div class="stephead"><span class="stepno">1</span><h2 id="s1h">Фото и размеры</h2></div>
     <div class="hero">
+      <div class="dropcol">
       <label class="drop big" id="aiDrop" for="aiFile">
         <input id="aiFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple>
         <div class="thumbs" id="aiThumbs"></div>
         <span class="upbtn">Загрузить фото</span>
         <span id="aiDropTxt">или перетащите сюда (до 3 фото): фото, рендер или эскиз от руки</span>
       </label>
+      <label class="drop room" id="roomDrop" for="roomFile">
+        <input id="roomFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple>
+        <div class="thumbs" id="roomThumbs"></div>
+        <span class="upbtn ghostbtn">Фото помещения</span>
+        <span id="roomDropTxt">Необязательно: место, куда встанет мебель. Claude найдёт коллекторы, трубы, розетки, радиаторы, окна и учтёт их.</span>
+      </label>
+      </div>
       <div class="ai">
         <div class="fields">
           <label class="f">Ширина, мм<input id="aiW" type="number" min="0" inputmode="numeric" placeholder="1900"></label>
@@ -993,12 +1007,24 @@ function syncTitle(){ $('#projTitle').value = S.title || ''; }
 $('#projTitle').addEventListener('input', e=>{ S.title = e.target.value; save(); scheduleDrawing(); });
 
 /* ===================== STEP 1: photo → backend → Claude → modules ===================== */
-const AI = {files:[], ctl:null, maxCount:3, configured:false};
+const AI = {files:[], room:[], roomMax:2, ctl:null, maxCount:3, configured:false};
 function aiThumbs(){
   $('#aiThumbs').innerHTML = '';
   AI.files.forEach(f=>{ const img = document.createElement('img'); img.alt = f.name; img.src = URL.createObjectURL(f); $('#aiThumbs').append(img); });
   $('#aiDropTxt').textContent = AI.files.length ? `Выбрано фото: ${AI.files.length}. Нажмите, чтобы заменить` : `или перетащите сюда (до ${AI.maxCount} фото): фото, рендер или эскиз от руки`;
 }
+const ROOM_HINT = 'Необязательно: место, куда встанет мебель. Claude найдёт коллекторы, трубы, розетки, радиаторы, окна и учтёт их.';
+function roomThumbs(){
+  $('#roomThumbs').innerHTML = '';
+  AI.room.forEach(f=>{ const img = document.createElement('img'); img.alt = f.name; img.src = URL.createObjectURL(f); $('#roomThumbs').append(img); });
+  $('#roomDropTxt').textContent = AI.room.length ? `Фото помещения: ${AI.room.length}. Нажмите, чтобы заменить` : ROOM_HINT;
+}
+function roomSetFiles(list){ AI.room = [...list].filter(f=>/^image\//.test(f.type)).slice(0, AI.roomMax); roomThumbs(); }
+$('#roomFile').addEventListener('change', e=>roomSetFiles(e.target.files));
+const roomDrop = $('#roomDrop');
+['dragenter','dragover'].forEach(ev=>roomDrop.addEventListener(ev, e=>{ e.preventDefault(); roomDrop.classList.add('over'); }));
+['dragleave','drop'].forEach(ev=>roomDrop.addEventListener(ev, e=>{ e.preventDefault(); roomDrop.classList.remove('over'); }));
+roomDrop.addEventListener('drop', e=>{ if(e.dataTransfer?.files?.length) roomSetFiles(e.dataTransfer.files); });
 function aiSetFiles(list){ AI.files = [...list].filter(f=>/^image\//.test(f.type)).slice(0, AI.maxCount); aiThumbs(); }
 $('#aiFile').addEventListener('change', e=>aiSetFiles(e.target.files));
 const drop = $('#aiDrop');
@@ -1029,6 +1055,7 @@ function renderAiSummary(){
   if(!a){ box.hidden = true; box.innerHTML = ''; return; }
   box.hidden = false;
   box.innerHTML = `<div><b>Claude:</b> ${esc(a.summary || 'конструкция получена')}</div>`
+    + (a.siteNotes?.length ? `<div class="sitenotes"><b>Что учесть на месте (по фото помещения):</b><ul>${a.siteNotes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul></div>` : '')
     + (a.notes?.length ? `<ul>${a.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul>` : '')
     + (S.prev ? `<div><button type="button" class="ghost" id="aiUndo">Вернуть прежний проект</button></div>` : '');
 }
@@ -1049,7 +1076,7 @@ function applyProposal(p){
   }else{
     S.modules = mods; S.custom = []; S.title = '';
   }
-  S.ai = {summary:p.summary, notes:p.notes || []};
+  S.ai = {summary:p.summary, notes:p.notes || [], siteNotes:p.siteNotes || []};
   S.sel = mods[0]?.id ?? S.sel; S.tab = 'parts';
   renderAiSummary(); syncTitle(); refresh(true);
   aiStatus('ok', `Готово: ${mods.length} ${plural(mods.length,'модуль','модуля','модулей')}. Чертёж, деталировка и смета обновлены ниже.`);
@@ -1068,12 +1095,13 @@ $('#aiGo').addEventListener('click', async ()=>{
   if(!AI.files.length && !note){ aiStatus('err', 'Добавьте фото или опишите мебель в пожеланиях.'); return; }
   if(!AI.configured){ aiStatus('err', 'Claude не подключён: задайте ANTHROPIC_API_KEY и перезапустите приложение.'); return; }
   AI.ctl = new AbortController(); $('#aiGo').disabled = true; $('#aiStop').hidden = false;
-  aiStatus('busy', AI.files.length ? 'Отправляю фото в Claude… обычно 20–60 секунд.' : 'Claude думает…');
+  aiStatus('busy', AI.files.length || AI.room.length ? 'Отправляю фото в Claude… обычно 20–60 секунд.' : 'Claude думает…');
   try{
     const images = await Promise.all(AI.files.map(toPayload));
+    const roomImgs = (await Promise.all(AI.room.map(toPayload))).map(i=>({...i, kind:'room'}));
     const num = id=>{ const v = +$(id).value; return v > 0 ? v : null; };
     const body = JSON.stringify({width:num('#aiW'), height:num('#aiH'), depth:num('#aiD'), notes:note,
-      thickness:sheetById(S.settings.corpus).T, images});
+      thickness:sheetById(S.settings.corpus).T, images:images.concat(roomImgs)});
     const p = await api('/api/analyze', body, AI.ctl.signal);
     if(p.drawingSvg){ DRAW.svg = p.drawingSvg; $('#asmBox').innerHTML = p.drawingSvg; }
     applyProposal(p);

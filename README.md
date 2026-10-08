@@ -27,7 +27,7 @@ photo + W×H×D ──► Java backend ──► Anthropic Messages API (vision)
 
 ## Using it
 
-1. **Фото и размеры.** Upload up to 3 photos, renders or hand sketches, then enter the overall width, height and depth plus any wishes. Click «Рассчитать по фото».
+1. **Фото и размеры.** Upload up to 3 photos, renders or hand sketches. Optionally add up to 2 photos of the room: Claude looks for obstacles (water or heating manifolds, pipes, radiators, panels, sockets, vents, windows, door swing) and lists them under «Что учесть на месте». Then enter the overall width, height and depth plus any wishes. Click «Рассчитать по фото».
 2. **Чертёж сборки.** Claude's reading of the photo appears together with the drawing. «Скачать PNG / SVG» saves the drawing. «Вернуть прежний проект» undoes the import.
 3. **Детали, раскрой и смета.** Edit any module, including its position X/Y. The drawing, cut list, sheet maps, hardware and estimate recalculate as you type.
 
@@ -64,7 +64,7 @@ docker run -p 8080:8080 -e ANTHROPIC_API_KEY=sk-ant-... furniture-detailing
 | Method | Path | Body | Returns |
 |---|---|---|---|
 | `GET` | `/api/status` | — | `{claudeConfigured, model, maxImages}` |
-| `POST` | `/api/analyze` | `{width, height, depth, notes, thickness, images:[{mediaType, data(base64)}]}` | proposal |
+| `POST` | `/api/analyze` | `{width, height, depth, notes, thickness, images:[{mediaType, data(base64), kind?:"room"}]}` | proposal |
 | `POST` | `/api/proposal/normalize` | any text containing proposal JSON | proposal |
 | `POST` | `/api/drawing` | `{modules:[ModuleSpec], thickness, title}` | assembly drawing, `image/svg+xml` |
 

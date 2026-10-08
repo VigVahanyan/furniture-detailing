@@ -12,5 +12,10 @@ public record AnalyzeRequest(Integer width, Integer height, Integer depth, Strin
                              List<Image> images) {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public record Image(String mediaType, String data) {}
+    /** kind: "room" for a photo of the space the piece will stand in; anything else is a photo/sketch of the piece. */
+    public record Image(String mediaType, String data, String kind) {
+        public boolean isRoom() {
+            return "room".equals(kind);
+        }
+    }
 }

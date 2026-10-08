@@ -9,11 +9,26 @@ public final class FurniturePrompt {
     }
 
     public static String build(DesignRequest r, int imageCount) {
+        return build(r, imageCount, 0);
+    }
+
+    /** Images are attached in order: first {@code imageCount} of the piece, then {@code roomCount} of the room. */
+    public static String build(DesignRequest r, int imageCount, int roomCount) {
         String dims = "ширина %s, высота %s, глубина %s".formatted(orNa(r.width()), orNa(r.height()), orNa(r.depth()));
         String notes = r.notes() == null || r.notes().isBlank() ? "нет" : r.notes().strip();
         String photo = imageCount > 0
                 ? "Приложено фото/эскиз (%d шт.). Опирайся на него.".formatted(imageCount)
-                : "Фото нет, работай по описанию.";
+                : "Фото мебели нет, работай по описанию.";
+        String room = roomCount > 0 ? """
+
+                Далее приложено фото помещения (%d шт.): место, куда встанет мебель. Это НЕ образец дизайна.
+                Внимательно найди на нём всё, что мешает или влияет на размеры и конструкцию:
+                коллекторы (водяные, отопительные), счётчики, трубы и стояки, радиаторы, электрощиток, розетки и выключатели,
+                вентиляционные решётки и короба, газовые трубы и краны, окна и подоконники, подъёмы и дверные проёмы
+                (куда открываются двери), плинтусы и наличники, скошенный потолок и неровные стены, батареи под окном.
+                Если из-за этого нужно уменьшить габарит, добавить вырез или оставить доступ (например, к коллектору или щитку),
+                учти это в размерах модулей и напиши в siteNotes. Не выдумывай то, чего не видно на фото.
+                """.formatted(roomCount) : "";
         return """
                 Ты технолог корпусной мебели из ЛДСП %d мм. %s
 
@@ -43,8 +58,9 @@ public final class FurniturePrompt {
                    "W":0,"H":0,"D":0,"doors":0,"drawers":0,"dh":0,"partitions":0,"shelves":0,"removable":true,
                    "top":"solid|rails","base":"none|legs|plinth","legH":100,"plinthH":80,"rod":false,"back":true,"hang":false,
                    "x":0,"y":0}],
-                 "notes":["допущения и что не входит в расчёт: зеркала, крючки, мягкие элементы, фрезеровка"]}
-                """.formatted(r.thickness(), photo, dims, notes);
+                 "notes":["допущения и что не входит в расчёт: зеркала, крючки, мягкие элементы, фрезеровка"],
+                 "siteNotes":["что учесть на месте по фото помещения: препятствия, замеры, которые нужно уточнить; [] если фото помещения нет"]}
+                """.formatted(r.thickness(), photo + room, dims, notes);
     }
 
     private static String orNa(Integer v) {
