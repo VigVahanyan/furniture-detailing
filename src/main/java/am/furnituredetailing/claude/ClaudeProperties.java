@@ -19,7 +19,7 @@ public record ClaudeProperties(
     public ClaudeProperties {
         if (model == null || model.isBlank()) model = DEFAULT_MODEL;
         if (baseUrl == null || baseUrl.isBlank()) baseUrl = "https://api.anthropic.com";
-        if (maxTokens <= 0) maxTokens = 4000;
+        if (maxTokens <= 0) maxTokens = 16000;
         if (timeout == null) timeout = Duration.ofSeconds(120);
         if (maxImages <= 0) maxImages = 3;
     }
@@ -32,7 +32,7 @@ public record ClaudeProperties(
                 env.get("ANTHROPIC_API_KEY"),
                 env.get("CLAUDE_MODEL"),
                 env.get("CLAUDE_BASE_URL"),
-                parseInt(env.get("CLAUDE_MAX_TOKENS"), 4000),
+                parseInt(env.get("CLAUDE_MAX_TOKENS"), 16000),
                 Duration.ofSeconds(parseInt(env.get("CLAUDE_TIMEOUT_SECONDS"), 120)),
                 3);
     }

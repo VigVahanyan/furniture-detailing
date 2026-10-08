@@ -111,7 +111,8 @@ public class AnthropicClaudeClient implements ClaudeGateway {
             throw new ClaudeException(502, "Claude returned no text: " + why);
         }
         if ("max_tokens".equals(json.path("stop_reason").asText())) {
-            log.log(System.Logger.Level.WARNING, "Claude answer hit max_tokens; JSON may be incomplete");
+            log.log(System.Logger.Level.WARNING, "Claude answer hit max_tokens: " + json.path("usage"));
+            throw new ClaudeException(502, "Ответ Claude обрезан по лимиту токенов (" + props.maxTokens() + "): увеличьте CLAUDE_MAX_TOKENS");
         }
         return text.toString();
     }

@@ -49,7 +49,7 @@ On Windows use `set ANTHROPIC_API_KEY=...`, or run `run.bat`.
 | `ANTHROPIC_API_KEY` | — | Required for photo analysis. Without it the UI still works with manual or pasted JSON. |
 | `CLAUDE_MODEL` | `claude-sonnet-5-5` | Any vision-capable Claude model, e.g. `claude-opus-5-5` for harder pieces. |
 | `PORT` / `HOST` | `8080` / `127.0.0.1` | Set `HOST=0.0.0.0` to open the app from a phone on the same Wi-Fi. |
-| `CLAUDE_MAX_TOKENS` | `4000` | Answer size limit. |
+| `CLAUDE_MAX_TOKENS` | `16000` | Answer size limit. |
 | `CLAUDE_TIMEOUT_SECONDS` | `120` | Request timeout. |
 
 With Docker:
